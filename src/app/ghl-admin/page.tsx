@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 export default function GhlAdminPage() {
-  const [locationId, setLocationId] = useState<string | null>(() => {
+  const locationId = useMemo(() => {
     if (typeof window === 'undefined') return null
     const params = new URLSearchParams(window.location.search)
     return params.get('locationId') || params.get('location_id')
-  })
+  }, [])
   const [testApiKey, setTestApiKey] = useState('')
   const [liveApiKey, setLiveApiKey] = useState('')
   const [saving, setSaving] = useState(false)

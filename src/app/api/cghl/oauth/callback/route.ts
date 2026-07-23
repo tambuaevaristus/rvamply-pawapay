@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { exchangeCodeForToken } from '@/lib/ghl'
+import { exchangeCodeForToken, getGhlRedirectUri } from '@/lib/ghl'
 import { upsertInstallation } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
         { status: 400, headers: { 'Content-Type': 'text/html' } }
       )
     }
+
+    console.log('[GHL] Exchanging code. redirect_uri:', getGhlRedirectUri())
+    console.log('[GHL] NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL)
 
     const tokenData = await exchangeCodeForToken(code)
     const resolvedLocationId = locationId || tokenData.locationId || ''

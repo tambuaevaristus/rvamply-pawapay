@@ -19,7 +19,10 @@ function getGhlConfig() {
 }
 
 export function getGhlRedirectUri(): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ghl/oauth/callback`
+  const explicit = process.env.GHL_REDIRECT_URI
+  if (explicit) return explicit.replace(/\/+$/, '')
+  const base = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
+  return `${base}/api/ghl/oauth/callback`
 }
 
 export async function exchangeCodeForToken(code: string): Promise<GhlTokenResponse> {
