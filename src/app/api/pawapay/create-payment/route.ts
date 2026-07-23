@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { initiateDeposit } from '@/lib/pawapay'
 import { PawapayProvider } from '@/lib/types'
+import { upsertTransaction } from '@/lib/db'
 
 function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -42,6 +43,26 @@ export async function POST(request: NextRequest) {
       clientReferenceId: clientReferenceId || undefined,
       customerMessage: 'Payment via rvamply',
       metadata: metadata || undefined,
+    })
+
+    const now = new Date().toISOString()
+
+    upsertTransaction({
+      id: depositId,
+      depositId,
+      locationId: metadata?.ghlLocationId || '',
+      ghlTransactionId: metadata?.ghlTransactionId || null,
+      contactId: metadata?.ghlContactId || null,
+      opportunityId: null,
+      amount: String(amount),
+      currency: currency.toUpperCase(),
+      provider,
+      phoneNumber,
+      status: result.status,
+      clientReferenceId: clientReferenceId || null,
+      metadata: JSON.stringify(metadata || {}),
+      createdAt: now,
+      updatedAt: now,
     })
 
     return NextResponse.json(result, { status: result.status === 'ACCEPTED' ? 201 : 200 })
