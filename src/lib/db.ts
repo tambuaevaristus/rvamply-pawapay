@@ -1,7 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 
-const DB_DIR = path.join(process.cwd(), '.data')
+const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/.data' : path.join(process.cwd(), '.data'))
+const DB_DIR = path.join(DATA_DIR)
 const DB_PATH = path.join(DB_DIR, 'store.json')
 
 interface Installation {
