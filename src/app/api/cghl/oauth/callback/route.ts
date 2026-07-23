@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         { status: 400, headers: { 'Content-Type': 'text/html' } }
       )
     }
-
+// kk
     console.log('[GHL] Exchanging code. redirect_uri:', getGhlRedirectUri())
     console.log('[GHL] NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL)
 
