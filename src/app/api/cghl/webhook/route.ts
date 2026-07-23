@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[GHL Webhook] Received:', JSON.stringify(payload))
 
-    const { type, locationId, companyId } = payload
+    const { type, locationId } = payload
 
     if (type === 'AppUninstall' || type === 'app.uninstall') {
       if (locationId) {

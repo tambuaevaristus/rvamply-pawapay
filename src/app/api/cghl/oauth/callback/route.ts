@@ -1,9 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { exchangeCodeForToken } from '@/lib/ghl'
-import {
-  upsertInstallation,
-  getAllInstallations,
-} from '@/lib/db'
+import { upsertInstallation } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {

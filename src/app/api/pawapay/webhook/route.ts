@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { parseCallbackPayload } from '@/lib/pawapay'
 import { getTransaction, upsertTransaction, getInstallation } from '@/lib/db'
 import {
-  createContact as ghlCreateContact,
   createOpportunity as ghlCreateOpportunity,
-  updateOpportunityStage as ghlUpdateOpportunityStage,
 } from '@/lib/ghl'
 
 export async function POST(request: NextRequest) {

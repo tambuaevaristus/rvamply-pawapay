@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getInstallation, getTransaction, getTransactionByGhlId } from '@/lib/db'
+import { getTransaction, getTransactionByGhlId } from '@/lib/db'
 import { checkDepositStatus } from '@/lib/pawapay'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, transactionId, chargeId, apiKey, locationId } = body
+    const { type, transactionId, chargeId } = body
 
     console.log(`[GHL Query] type=${type} transactionId=${transactionId} chargeId=${chargeId}`)
 

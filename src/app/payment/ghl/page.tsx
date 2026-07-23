@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import PaymentForm from '@/components/PaymentForm'
 
 interface GhlPaymentContext {
@@ -20,18 +20,14 @@ interface GhlPaymentContext {
 
 export default function GhlPaymentPage() {
   const [context, setContext] = useState<GhlPaymentContext | null>(null)
-  const [ready, setReady] = useState(false)
   const [chargeId, setChargeId] = useState<string | null>(null)
 
-  const dispatchReady = useCallback(() => {
+  useEffect(() => {
     window.parent.postMessage(
       { type: 'custom_provider_ready', loaded: true, addCardOnFileSupported: false },
       '*'
     )
-    setReady(true)
-  }, [])
 
-  useEffect(() => {
     function handleMessage(event: MessageEvent) {
       const data = event.data
       if (!data || !data.type) return
@@ -62,10 +58,8 @@ export default function GhlPaymentPage() {
     }
 
     window.addEventListener('message', handleMessage)
-    dispatchReady()
-
     return () => window.removeEventListener('message', handleMessage)
-  }, [dispatchReady])
+  }, [])
 
   const handlePaymentSuccess = async (result: { depositId: string; status: string }) => {
     setChargeId(result.depositId)
@@ -101,14 +95,6 @@ export default function GhlPaymentPage() {
 
   const handleClose = () => {
     window.parent.postMessage({ type: 'custom_element_close_response' }, '*')
-  }
-
-  if (!ready) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-white">
-        <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" />
-      </div>
-    )
   }
 
   return (

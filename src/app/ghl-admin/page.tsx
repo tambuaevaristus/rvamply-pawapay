@@ -1,23 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 export default function GhlAdminPage() {
-  const [authToken, setAuthToken] = useState<string | null>(null)
-  const [locationId, setLocationId] = useState<string | null>(null)
+  const [locationId, setLocationId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    const params = new URLSearchParams(window.location.search)
+    return params.get('locationId') || params.get('location_id')
+  })
   const [testApiKey, setTestApiKey] = useState('')
   const [liveApiKey, setLiveApiKey] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const token = params.get('authToken') || params.get('token')
-    const locId = params.get('locationId') || params.get('location_id')
-    if (token) setAuthToken(token)
-    if (locId) setLocationId(locId)
-  }, [])
 
   const handleSave = async () => {
     setSaving(true)
