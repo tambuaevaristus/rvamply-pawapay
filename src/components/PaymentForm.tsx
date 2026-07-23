@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { PawapayProvider } from '@/lib/types'
 
 interface CountryConfig {
@@ -192,38 +192,20 @@ interface PaymentFormProps {
 }
 
 export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentFormProps) {
+  const initialName = ghlContext?.contact?.name?.split(' ') || []
+
   const [countryCode, setCountryCode] = useState('')
   const [provider, setProvider] = useState<PawapayProvider | ''>('')
-  const [phoneNumber, setPhoneNumber] = useState('')
-  const [amount, setAmount] = useState('')
-  const [email, setEmail] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState(ghlContext?.contact?.contact || '')
+  const [amount, setAmount] = useState(ghlContext?.amount ? String(ghlContext.amount) : '')
+  const [email, setEmail] = useState(ghlContext?.contact?.email || '')
+  const [firstName, setFirstName] = useState(initialName[0] || '')
+  const [lastName, setLastName] = useState(initialName.slice(1).join(' '))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const country = countryCode ? COUNTRIES[countryCode] : null
   const currency = ghlContext?.currency || country?.currency || 'USD'
-
-  useEffect(() => {
-    if (ghlContext?.contact) {
-      const nameParts = (ghlContext.contact.name || '').split(' ')
-      if (nameParts.length > 1) {
-        setFirstName(nameParts[0])
-        setLastName(nameParts.slice(1).join(' '))
-      } else if (nameParts.length === 1) {
-        setFirstName(nameParts[0])
-      }
-      if (ghlContext.contact.email) setEmail(ghlContext.contact.email)
-      if (ghlContext.contact.contact) setPhoneNumber(ghlContext.contact.contact)
-    }
-  }, [ghlContext])
-
-  useEffect(() => {
-    if (ghlContext?.amount && ghlContext.amount > 0) {
-      setAmount(String(ghlContext.amount))
-    }
-  }, [ghlContext])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
