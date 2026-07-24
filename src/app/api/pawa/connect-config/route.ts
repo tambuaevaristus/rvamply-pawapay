@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       description: 'Mobile money payments across Africa via PawaPay',
       imageUrl: `${baseUrl}/globe.svg`,
       locationId,
-      queryUrl: `${baseUrl}/api/ghl/payments/query`,
+      queryUrl: `${baseUrl}/api/pawa/payments/query`,
       paymentsUrl: `${baseUrl}/payment/ghl`,
     }
 

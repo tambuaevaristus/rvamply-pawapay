@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
     try {
-      await fetch(`${baseUrl}/api/ghl/connect-config`, {
+      await fetch(`${baseUrl}/api/pawa/connect-config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

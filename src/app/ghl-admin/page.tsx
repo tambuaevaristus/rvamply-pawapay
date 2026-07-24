@@ -20,7 +20,7 @@ export default function GhlAdminPage() {
     setError('')
 
     try {
-      const res = await fetch('/api/ghl/connect-config', {
+      const res = await fetch('/api/pawa/connect-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

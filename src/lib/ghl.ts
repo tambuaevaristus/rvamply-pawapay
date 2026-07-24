@@ -22,7 +22,7 @@ export function getGhlRedirectUri(): string {
   const explicit = process.env.GHL_REDIRECT_URI
   if (explicit) return explicit.replace(/\/+$/, '')
   const base = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
-  return `${base}/api/ghl/oauth/callback`
+  return `${base}/api/pawa/oauth/callback`
 }
 
 export async function exchangeCodeForToken(code: string): Promise<GhlTokenResponse> {
