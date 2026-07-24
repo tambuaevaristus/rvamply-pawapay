@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
-import { exchangeCodeForToken, getGhlRedirectUri } from '@/lib/ghl'
-import { upsertInstallation } from '@/lib/db'
+import { exchangeCodeForToken, getGhlRedirectUri, createPaymentIntegration } from '@/lib/ghl'
+import { upsertInstallation, getInstallation } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,13 +15,20 @@ export async function GET(request: NextRequest) {
         { status: 400, headers: { 'Content-Type': 'text/html' } }
       )
     }
-// kk
+
     console.log('[GHL] Exchanging code. redirect_uri:', getGhlRedirectUri())
     console.log('[GHL] NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL)
 
     const tokenData = await exchangeCodeForToken(code)
     const resolvedLocationId = locationId || tokenData.locationId || ''
     const resolvedCompanyId = companyId || tokenData.companyId || null
+
+    if (!resolvedLocationId) {
+      return new Response(
+        '<html><body><h2>Installation Failed</h2><p>No location ID received from GoHighLevel.</p></body></html>',
+        { status: 400, headers: { 'Content-Type': 'text/html' } }
+      )
+    }
 
     upsertInstallation({
       id: `${resolvedLocationId}-${Date.now()}`,
@@ -35,21 +42,26 @@ export async function GET(request: NextRequest) {
       installedAt: new Date().toISOString(),
     })
 
-    console.log(
-      `[GHL] App installed for location ${resolvedLocationId}`
-    )
+    console.log(`[GHL] App installed for location ${resolvedLocationId}`)
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
     try {
-      await fetch(`${baseUrl}/api/pawa/connect-config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const installation = getInstallation(resolvedLocationId)
+      if (installation) {
+        const config = {
+          name: 'mountainHub PawaPay',
+          description: 'Mobile money payments across Africa via PawaPay',
+          imageUrl: `${baseUrl}/globe.svg`,
           locationId: resolvedLocationId,
-          companyId: resolvedCompanyId,
-        }),
-      }).catch(e => console.error('[GHL] Failed to auto-create integration:', e))
+          queryUrl: `${baseUrl}/api/pawa/payments/query`,
+          paymentsUrl: `${baseUrl}/payment/ghl`,
+        }
+        const result = await createPaymentIntegration(config, installation.accessToken)
+        console.log(`[GHL] Payment integration configured for ${resolvedLocationId}:`, JSON.stringify(result))
+      } else {
+        console.error('[GHL] Installation not found after upsert for location', resolvedLocationId)
+      }
     } catch (e) {
       console.error('[GHL] Failed to auto-create integration:', e)
     }

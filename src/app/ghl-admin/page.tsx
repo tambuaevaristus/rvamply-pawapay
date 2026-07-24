@@ -19,6 +19,12 @@ export default function GhlAdminPage() {
     setSaved(false)
     setError('')
 
+    if (!locationId) {
+      setError('No location ID found. Open this page from your GoHighLevel payment settings.')
+      setSaving(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/pawa/connect-config', {
         method: 'POST',
