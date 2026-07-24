@@ -107,6 +107,19 @@ export async function getLocation(
   return response.json()
 }
 
+export async function listCompanyLocations(
+  companyId: string,
+  accessToken: string
+): Promise<{ locations: Array<{ id: string; name: string; [key: string]: unknown }> }> {
+  const response = await ghlFetch(`/v3/locations/search?companyId=${companyId}`, accessToken)
+
+  if (!response.ok) {
+    throw new Error(`Failed to list locations: ${await response.text()}`)
+  }
+
+  return response.json()
+}
+
 export async function createContact(
   data: { firstName?: string; lastName?: string; email?: string; phone?: string; locationId: string },
   accessToken: string
