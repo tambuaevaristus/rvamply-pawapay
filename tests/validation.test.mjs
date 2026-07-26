@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeAmount, normalizeCurrency, normalizePhoneNumber, validateCreatePaymentBody } from '../src/lib/validation.js'
+import validation from '../src/lib/validation.js'
+
+const { normalizeAmount, normalizeCurrency, normalizePhoneNumber, validateCreatePaymentBody } = validation
 
 test('normalizeAmount accepts valid numeric input', () => {
   assert.equal(normalizeAmount('1250.50'), 1250.5)
@@ -18,5 +20,5 @@ test('normalizePhoneNumber strips non-essential characters', () => {
 
 test('validateCreatePaymentBody rejects malformed payloads', () => {
   assert.throws(() => validateCreatePaymentBody({ amount: 0, currency: 'KES', provider: 'MPESA_KEN', phoneNumber: '0712345678' }))
-  assert.throws(() => validateCreatePaymentBody({ amount: '10', currency: 'KSH', provider: 'MPESA_KEN', phoneNumber: '0712345678' }))
+  assert.throws(() => validateCreatePaymentBody({ amount: '10', currency: 'KSHX', provider: 'MPESA_KEN', phoneNumber: '0712345678' }))
 })

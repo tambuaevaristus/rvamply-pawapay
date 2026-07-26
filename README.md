@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# mountainHub PawaPay
 
-## Getting Started
+A GoHighLevel Marketplace payment provider for PawaPay mobile money payments.
 
-First, run the development server:
+## Local development
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Copy the environment template:
+   ```bash
+   cp .env.example .env.local
+   ```
+3. Start the app:
+   ```bash
+   npm run dev
+   ```
+
+## Required environment variables
+
+```env
+NEXT_PUBLIC_APP_URL=https://your-domain.com
+GHL_CLIENT_ID=your-ghl-client-id
+GHL_CLIENT_SECRET=your-ghl-client-secret
+GHL_REDIRECT_URI=https://your-domain.com/api/pawa/oauth/callback
+PAWAPAY_API_KEY=your-pawapay-api-key
+PAWAPAY_ENVIRONMENT=sandbox
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## GoHighLevel marketplace configuration
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Use these URLs in the marketplace app configuration:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- OAuth redirect URI: https://your-domain.com/api/pawa/oauth/callback
+- Webhook URL: https://your-domain.com/api/pawa/webhook
+- Query URL: https://your-domain.com/api/pawa/payments/query
+- Payments URL: https://your-domain.com/payment/ghl
 
-## Learn More
+## Common install failure
 
-To learn more about Next.js, take a look at the following resources:
+If the install page returns an OAuth error such as "Invalid client credentials", verify that:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- the GHL client ID and secret are copied from the correct marketplace app
+- the redirect URI in the GHL app matches the deployed callback URL exactly
+- the app is running with the same values in the hosting environment

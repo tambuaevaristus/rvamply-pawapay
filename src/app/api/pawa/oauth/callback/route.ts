@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const allParams: Record<string, string> = {}
     searchParams.forEach((value, key) => { allParams[key] = value })
     console.log('[GHL] OAuth callback all params:', JSON.stringify(allParams))
+    console.log('[GHL] Expected redirect URI:', getGhlRedirectUri())
 
     const code = searchParams.get('code')
     const locationId = searchParams.get('locationId') || searchParams.get('location_id')

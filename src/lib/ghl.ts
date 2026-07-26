@@ -27,11 +27,11 @@ const GHL_API_BASE = 'https://services.leadconnectorhq.com'
 const GHL_OAUTH_TOKEN_URL = `${GHL_API_BASE}/oauth/token`
 
 function getGhlConfig() {
-  const clientId = process.env.GHL_CLIENT_ID
-  const clientSecret = process.env.GHL_CLIENT_SECRET
+  const clientId = process.env.GHL_CLIENT_ID?.trim()
+  const clientSecret = process.env.GHL_CLIENT_SECRET?.trim()
 
   if (!clientId || !clientSecret) {
-    throw new Error('GHL_CLIENT_ID and GHL_CLIENT_SECRET must be configured')
+    throw new Error('GHL_CLIENT_ID and GHL_CLIENT_SECRET must be configured in your hosting environment')
   }
 
   return { clientId, clientSecret }
@@ -62,7 +62,8 @@ export async function exchangeCodeForToken(code: string): Promise<GhlTokenRespon
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`GHL OAuth token exchange failed: ${error}`)
+    const redirectUri = getGhlRedirectUri()
+    throw new Error(`GHL OAuth token exchange failed: ${error}. Verify that GHL_CLIENT_ID, GHL_CLIENT_SECRET, and GHL_REDIRECT_URI are correct. Expected redirect URI: ${redirectUri}`)
   }
 
   return response.json()
