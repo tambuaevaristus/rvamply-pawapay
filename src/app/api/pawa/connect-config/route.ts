@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getInstallation } from '@/lib/db'
-import { createPaymentIntegration } from '@/lib/ghl'
+import { createPaymentIntegration, buildProviderConfig } from '@/lib/ghl'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,16 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No installation found for this location' }, { status: 404 })
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-
-    const config = {
-      name: 'mountainHub PawaPay',
-      description: 'Mobile money payments across Africa via PawaPay',
-      imageUrl: `${baseUrl}/globe.svg`,
-      locationId,
-      queryUrl: `${baseUrl}/api/pawa/payments/query`,
-      paymentsUrl: `${baseUrl}/payment/ghl`,
-    }
+    const config = buildProviderConfig(locationId)
 
     const result = await createPaymentIntegration(config, installation.accessToken)
 

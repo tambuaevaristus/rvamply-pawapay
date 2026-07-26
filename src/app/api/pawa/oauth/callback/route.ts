@@ -1,17 +1,9 @@
 import { NextRequest } from 'next/server'
-import { exchangeCodeForToken, getGhlRedirectUri, createPaymentIntegration, listCompanyLocations } from '@/lib/ghl'
-import { upsertInstallation, getInstallation } from '@/lib/db'
+import { exchangeCodeForToken, getGhlRedirectUri, createPaymentIntegration, listCompanyLocations, buildProviderConfig } from '@/lib/ghl'
+import { upsertInstallation } from '@/lib/db'
 
 async function configurePaymentIntegration(locationId: string, accessToken: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const config = {
-    name: 'mountainHub PawaPay',
-    description: 'Mobile money payments across Africa via PawaPay',
-    imageUrl: `${baseUrl}/globe.svg`,
-    locationId,
-    queryUrl: `${baseUrl}/api/pawa/payments/query`,
-    paymentsUrl: `${baseUrl}/payment/ghl`,
-  }
+  const config = buildProviderConfig(locationId)
   const result = await createPaymentIntegration(config, accessToken)
   console.log(`[GHL] Payment integration configured for ${locationId}:`, JSON.stringify(result))
 }

@@ -4,6 +4,25 @@ import {
   GhlProviderConnectConfig,
 } from './ghl-types'
 
+function getAppBaseUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL
+  if (explicit) return explicit.replace(/\/+$/, '')
+  return 'http://localhost:3000'
+}
+
+export function buildProviderConfig(locationId: string) {
+  const baseUrl = getAppBaseUrl()
+  return {
+    name: 'mountainHub PawaPay',
+    description: 'Mobile money payments across Africa via PawaPay',
+    imageUrl: `${baseUrl}/globe.svg`,
+    locationId,
+    queryUrl: `${baseUrl}/api/pawa/payments/query`,
+    paymentsUrl: `${baseUrl}/payment/ghl`,
+    webhookUrl: `${baseUrl}/api/pawa/webhook`,
+  } satisfies GhlCustomProviderConfig
+}
+
 const GHL_API_BASE = 'https://services.leadconnectorhq.com'
 const GHL_OAUTH_TOKEN_URL = `${GHL_API_BASE}/oauth/token`
 
@@ -21,8 +40,7 @@ function getGhlConfig() {
 export function getGhlRedirectUri(): string {
   const explicit = process.env.GHL_REDIRECT_URI
   if (explicit) return explicit.replace(/\/+$/, '')
-  const base = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
-  return `${base}/api/pawa/oauth/callback`
+  return `${getAppBaseUrl()}/api/pawa/oauth/callback`
 }
 
 export async function exchangeCodeForToken(code: string): Promise<GhlTokenResponse> {

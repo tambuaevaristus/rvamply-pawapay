@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { initiateDeposit } from '@/lib/pawapay'
 import { PawapayProvider } from '@/lib/types'
 import { upsertTransaction } from '@/lib/db'
+import { PaymentValidationError, validateCreatePaymentBody } from '@/lib/validation'
 
 function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -13,26 +14,24 @@ function generateUUID(): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const body = await request.json().catch(() => null)
 
-    const { amount, currency, provider, phoneNumber, clientReferenceId, metadata } = body
-
-    if (!amount || !currency || !provider || !phoneNumber) {
+    if (!body || typeof body !== 'object') {
       return NextResponse.json(
-        {
-          error:
-            'Missing required fields: amount, currency, provider, phoneNumber',
-        },
+        { error: 'Request body must be a valid JSON object' },
         { status: 400 }
       )
     }
+
+    const validated = validateCreatePaymentBody(body as Record<string, unknown>)
+    const { amount, currency, provider, phoneNumber, clientReferenceId, metadata } = validated
 
     const depositId = generateUUID()
 
     const result = await initiateDeposit({
       depositId,
       amount: String(amount),
-      currency: currency.toUpperCase(),
+      currency,
       payer: {
         type: 'MMO',
         accountDetails: {
@@ -40,9 +39,9 @@ export async function POST(request: NextRequest) {
           phoneNumber,
         },
       },
-      clientReferenceId: clientReferenceId || undefined,
+      clientReferenceId,
       customerMessage: 'Payment via rvamply',
-      metadata: metadata || undefined,
+      metadata: metadata ? Object.fromEntries(Object.entries(metadata).filter(([, value]) => typeof value === 'string')) as Record<string, string> : undefined,
     })
 
     const now = new Date().toISOString()
@@ -50,12 +49,12 @@ export async function POST(request: NextRequest) {
     upsertTransaction({
       id: depositId,
       depositId,
-      locationId: metadata?.ghlLocationId || '',
-      ghlTransactionId: metadata?.ghlTransactionId || null,
-      contactId: metadata?.ghlContactId || null,
+      locationId: metadata?.ghlLocationId && typeof metadata.ghlLocationId === 'string' ? metadata.ghlLocationId : '',
+      ghlTransactionId: metadata?.ghlTransactionId && typeof metadata.ghlTransactionId === 'string' ? metadata.ghlTransactionId : null,
+      contactId: metadata?.ghlContactId && typeof metadata.ghlContactId === 'string' ? metadata.ghlContactId : null,
       opportunityId: null,
       amount: String(amount),
-      currency: currency.toUpperCase(),
+      currency,
       provider,
       phoneNumber,
       status: result.status,
@@ -67,6 +66,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: result.status === 'ACCEPTED' ? 201 : 200 })
   } catch (error) {
+    if (error instanceof PaymentValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
     const message =
       error instanceof Error ? error.message : 'Deposit initiation failed'
     return NextResponse.json({ error: message }, { status: 500 })
