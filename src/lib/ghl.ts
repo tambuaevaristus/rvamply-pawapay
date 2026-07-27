@@ -126,6 +126,29 @@ export async function getLocation(
   return response.json()
 }
 
+function normalizeLocationsPayload(payload: unknown): Array<{ id: string; name: string; [key: string]: unknown }> {
+  if (Array.isArray(payload)) {
+    return payload
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+      .map((item) => ({
+        id: String(item.id ?? item.locationId ?? item.location_id ?? ''),
+        name: String(item.name ?? item.locationName ?? item.location_name ?? item.id ?? ''),
+        ...item,
+      }))
+      .filter((item) => Boolean(item.id))
+  }
+
+  if (payload && typeof payload === 'object') {
+    const record = payload as Record<string, unknown>
+    const nested = [record.locations, record.data, record.items, record.result].find((value): value is unknown[] => Array.isArray(value))
+    if (nested) {
+      return normalizeLocationsPayload(nested)
+    }
+  }
+
+  return []
+}
+
 export async function listCompanyLocations(
   companyId: string,
   accessToken: string
@@ -133,10 +156,23 @@ export async function listCompanyLocations(
   const response = await ghlFetch(`/v3/locations/search?companyId=${companyId}`, accessToken)
 
   if (!response.ok) {
-    throw new Error(`Failed to list locations: ${await response.text()}`)
+    const body = await response.text()
+    if (!body.trim()) {
+      return { locations: [] }
+    }
+    throw new Error(`Failed to list locations: ${body}`)
   }
 
-  return response.json()
+  const body = await response.text()
+  if (!body.trim()) {
+    return { locations: [] }
+  }
+
+  try {
+    return { locations: normalizeLocationsPayload(JSON.parse(body)) }
+  } catch {
+    throw new Error(`Failed to parse locations response: ${body}`)
+  }
 }
 
 export async function createContact(

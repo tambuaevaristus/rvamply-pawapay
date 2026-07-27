@@ -79,30 +79,44 @@ export async function GET(request: NextRequest) {
     } else if (resolvedCompanyId) {
       console.log(`[GHL] Company-level install for ${resolvedCompanyId}, fetching locations...`)
 
+      let installNotice = 'Company-level install completed. Use the admin page to configure a specific location if needed.'
+
       try {
         const { locations } = await listCompanyLocations(resolvedCompanyId, token)
         console.log(`[GHL] Found ${locations.length} locations for company ${resolvedCompanyId}`)
 
-        for (const loc of locations) {
-          upsertInstallation({
-            id: `${loc.id}-${Date.now()}`,
-            locationId: loc.id,
-            companyId: resolvedCompanyId,
-            accessToken: token,
-            refreshToken: tokenData.refresh_token,
-            tokenExpiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : null,
-            installedAt: new Date().toISOString(),
-          })
+        if (locations.length === 0) {
+          console.warn(`[GHL] No locations returned for company ${resolvedCompanyId}; continuing without auto-configuring locations.`)
+        } else {
+          for (const loc of locations) {
+            upsertInstallation({
+              id: `${loc.id}-${Date.now()}`,
+              locationId: loc.id,
+              companyId: resolvedCompanyId,
+              accessToken: token,
+              refreshToken: tokenData.refresh_token,
+              tokenExpiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : null,
+              installedAt: new Date().toISOString(),
+            })
 
-          try {
-            await configurePaymentIntegration(loc.id, token)
-            console.log(`[GHL] Configured integration for location ${loc.id} (${loc.name})`)
-          } catch (e) {
-            console.error(`[GHL] Failed to configure integration for ${loc.id}:`, e)
+            try {
+              await configurePaymentIntegration(loc.id, token)
+              console.log(`[GHL] Configured integration for location ${loc.id} (${loc.name})`)
+            } catch (e) {
+              console.error(`[GHL] Failed to configure integration for ${loc.id}:`, e)
+            }
           }
+
+          installNotice = `Configured ${locations.length} location(s) for this company.`
         }
       } catch (e) {
-        console.error('[GHL] Failed to configure locations from company:', e)
+        const message = e instanceof Error ? e.message : 'Unknown error'
+        console.warn('[GHL] Failed to configure locations from company:', message)
+        installNotice = 'The app was installed, but location discovery was unavailable. Use the admin page to configure a specific location.'
+      }
+
+      if (resolvedCompanyId) {
+        console.log(`[GHL] Install notice: ${installNotice}`)
       }
     }
 
@@ -129,7 +143,7 @@ export async function GET(request: NextRequest) {
     </div>
     <h1>Installation Complete</h1>
     <p>mountainHub.africa has been connected successfully.</p>
-    <p style="font-size:14px;color:#a78bfa;">Location: ${resolvedLocationId}</p>
+    <p style="font-size:14px;color:#a78bfa;">${resolvedLocationId ? `Location: ${resolvedLocationId}` : 'Company-level install completed.'}</p>
     <p style="font-size:14px;color:#a78bfa;">You can now close this tab.</p>
   </div>
 </body>
