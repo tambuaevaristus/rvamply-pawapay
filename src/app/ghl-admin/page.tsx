@@ -31,8 +31,8 @@ export default function GhlAdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           locationId,
-          testMode: testApiKey ? { apiKey: testApiKey, publishableKey: testApiKey } : null,
-          liveMode: liveApiKey ? { apiKey: liveApiKey, publishableKey: liveApiKey } : null,
+          test: testApiKey ? { apiKey: testApiKey, publishableKey: testApiKey } : null,
+          live: liveApiKey ? { apiKey: liveApiKey, publishableKey: liveApiKey } : null,
         }),
       })
 

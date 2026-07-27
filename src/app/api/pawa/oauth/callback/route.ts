@@ -1,19 +1,43 @@
 import { NextRequest } from 'next/server'
-import { exchangeCodeForToken, getGhlRedirectUri, createPaymentIntegration, listCompanyLocations, buildProviderConfig } from '@/lib/ghl'
-import { upsertInstallation } from '@/lib/db'
+import { exchangeCodeForToken, getGhlRedirectUri, listCompanyLocations, registerPaymentProvider } from '@/lib/ghl'
+import { getConfig, upsertInstallation } from '@/lib/db'
+import type { GhlConnectProviderRequest, GhlProviderModeConfig } from '@/lib/ghl-types'
 
-async function configurePaymentIntegration(locationId: string, accessToken: string) {
-  const config = buildProviderConfig(locationId)
-  const result = await createPaymentIntegration(config, accessToken)
-  console.log(`[GHL] Payment integration configured for ${locationId}:`, JSON.stringify(result))
+function buildConnectConfig(locationId: string): GhlConnectProviderRequest {
+  const existingConfig = getConfig(locationId)
+  const envApiKey = process.env.PAWAPAY_API_KEY
+
+  const testModeConfig: GhlProviderModeConfig | null =
+    existingConfig?.testModeApiKey || envApiKey
+      ? {
+          apiKey: existingConfig?.testModeApiKey || envApiKey || '',
+          publishableKey: existingConfig?.testModePublishableKey || envApiKey || '',
+        }
+      : null
+
+  const liveModeConfig: GhlProviderModeConfig | null =
+    existingConfig?.liveModeApiKey
+      ? {
+          apiKey: existingConfig.liveModeApiKey,
+          publishableKey: existingConfig.liveModePublishableKey || existingConfig.liveModeApiKey,
+        }
+      : null
+
+  if (!testModeConfig && !liveModeConfig) {
+    console.warn(`[GHL] No API keys available for location ${locationId}, provider will be created without live/test config`)
+    return { test: null, live: null }
+  }
+
+  return {
+    test: testModeConfig,
+    live: liveModeConfig,
+  }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const allParams: Record<string, string> = {}
-    searchParams.forEach((value, key) => { allParams[key] = value })
-    console.log('[GHL] OAuth callback all params:', JSON.stringify(allParams))
+    console.log('[GHL] OAuth callback - all params:', JSON.stringify(Object.fromEntries(searchParams.entries())))
     console.log('[GHL] Expected redirect URI:', getGhlRedirectUri())
 
     const code = searchParams.get('code')
@@ -27,13 +51,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('[GHL] Exchanging code. redirect_uri:', getGhlRedirectUri())
-    console.log('[GHL] NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL)
-
     const tokenData = await exchangeCodeForToken(code)
-    const tokenKeys = Object.keys(tokenData as unknown as Record<string, unknown>)
-    console.log('[GHL] Token response keys:', tokenKeys)
-    console.log('[GHL] Token response (truncated):', JSON.stringify(tokenData, null, 2).slice(0, 2000))
+    console.log('[GHL] Token response keys:', Object.keys(tokenData as unknown as Record<string, unknown>))
 
     const tokenAny = tokenData as unknown as Record<string, unknown>
     const tokenLocationId =
@@ -56,72 +75,88 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const token = tokenData.access_token
+    const { access_token, refresh_token, expires_in } = tokenData
 
     if (resolvedLocationId) {
-      upsertInstallation({
-        id: `${resolvedLocationId}-${Date.now()}`,
-        locationId: resolvedLocationId,
-        companyId: resolvedCompanyId,
-        accessToken: token,
-        refreshToken: tokenData.refresh_token,
-        tokenExpiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : null,
-        installedAt: new Date().toISOString(),
-      })
+      await installLocation(resolvedLocationId, resolvedCompanyId, access_token, refresh_token, expires_in)
+    }
 
-      console.log(`[GHL] App installed for location ${resolvedLocationId}`)
-
-      try {
-        await configurePaymentIntegration(resolvedLocationId, token)
-      } catch (e) {
-        console.error('[GHL] Failed to auto-create integration:', e)
-      }
-    } else if (resolvedCompanyId) {
+    if (resolvedCompanyId && !resolvedLocationId) {
       console.log(`[GHL] Company-level install for ${resolvedCompanyId}, fetching locations...`)
 
       let installNotice = 'Company-level install completed. Use the admin page to configure a specific location if needed.'
 
       try {
-        const { locations } = await listCompanyLocations(resolvedCompanyId, token)
+        const { locations } = await listCompanyLocations(resolvedCompanyId, access_token)
         console.log(`[GHL] Found ${locations.length} locations for company ${resolvedCompanyId}`)
 
-        if (locations.length === 0) {
-          console.warn(`[GHL] No locations returned for company ${resolvedCompanyId}; continuing without auto-configuring locations.`)
-        } else {
+        if (locations.length > 0) {
+          let successCount = 0
           for (const loc of locations) {
-            upsertInstallation({
-              id: `${loc.id}-${Date.now()}`,
-              locationId: loc.id,
-              companyId: resolvedCompanyId,
-              accessToken: token,
-              refreshToken: tokenData.refresh_token,
-              tokenExpiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : null,
-              installedAt: new Date().toISOString(),
-            })
-
             try {
-              await configurePaymentIntegration(loc.id, token)
-              console.log(`[GHL] Configured integration for location ${loc.id} (${loc.name})`)
+              await installLocation(loc.id, resolvedCompanyId, access_token, refresh_token, expires_in)
+              successCount++
             } catch (e) {
-              console.error(`[GHL] Failed to configure integration for ${loc.id}:`, e)
+              console.error(`[GHL] Failed to configure integration for location ${loc.id} (${loc.name}):`, e)
             }
           }
-
-          installNotice = `Configured ${locations.length} location(s) for this company.`
+          installNotice = `Configured ${successCount} of ${locations.length} location(s) for this company.`
+        } else {
+          console.warn(`[GHL] No locations returned for company ${resolvedCompanyId}`)
         }
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Unknown error'
         console.warn('[GHL] Failed to configure locations from company:', message)
-        installNotice = 'The app was installed, but location discovery was unavailable. Use the admin page to configure a specific location.'
       }
 
-      if (resolvedCompanyId) {
-        console.log(`[GHL] Install notice: ${installNotice}`)
-      }
+      console.log(`[GHL] Install notice: ${installNotice}`)
     }
 
+    return new Response(renderSuccessPage(resolvedLocationId || undefined), {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'OAuth failed'
+    console.error('[GHL] OAuth callback error:', message)
+
     return new Response(
-      `<!DOCTYPE html>
+      `<html><body><h2>Installation Failed</h2><p>${message}</p></body></html>`,
+      { status: 500, headers: { 'Content-Type': 'text/html' } }
+    )
+  }
+}
+
+async function installLocation(
+  locationId: string,
+  companyId: string | null,
+  accessToken: string,
+  refreshToken: string | null,
+  expiresIn: number | undefined
+) {
+  upsertInstallation({
+    id: `${locationId}-${Date.now()}`,
+    locationId,
+    companyId,
+    accessToken,
+    refreshToken,
+    tokenExpiresAt: expiresIn ? Date.now() + expiresIn * 1000 : null,
+    installedAt: new Date().toISOString(),
+  })
+
+  console.log(`[GHL] App installed for location ${locationId}`)
+
+  try {
+    const connectConfig = buildConnectConfig(locationId)
+    const result = await registerPaymentProvider(locationId, accessToken, connectConfig)
+    console.log(`[GHL] Payment provider registered for location ${locationId}:`, JSON.stringify(result))
+  } catch (e) {
+    console.error(`[GHL] Failed to register payment provider for location ${locationId}:`, e)
+  }
+}
+
+function renderSuccessPage(locationId?: string): string {
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -143,23 +178,10 @@ export async function GET(request: NextRequest) {
     </div>
     <h1>Installation Complete</h1>
     <p>mountainHub.africa has been connected successfully.</p>
-    <p style="font-size:14px;color:#a78bfa;">${resolvedLocationId ? `Location: ${resolvedLocationId}` : 'Company-level install completed.'}</p>
+    ${locationId ? `<p style="font-size:14px;color:#a78bfa;">Location: ${locationId}</p>` : ''}
+    <p style="font-size:14px;color:#a78bfa;">Check Payments &rarr; Integrations in your sub-account to configure.</p>
     <p style="font-size:14px;color:#a78bfa;">You can now close this tab.</p>
   </div>
 </body>
-</html>`,
-      {
-        status: 200,
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
-      }
-    )
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'OAuth failed'
-    console.error('[GHL] OAuth callback error:', message)
-
-    return new Response(
-      `<html><body><h2>Installation Failed</h2><p>${message}</p></body></html>`,
-      { status: 500, headers: { 'Content-Type': 'text/html' } }
-    )
-  }
+</html>`
 }

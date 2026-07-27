@@ -84,23 +84,44 @@ export interface GhlAppUninstallEvent extends GhlWebhookPayload {
   companyId: string
 }
 
-export interface GhlCustomProviderConfig {
+export interface GhlCreateProviderRequest {
   name: string
   description: string
   imageUrl: string
-  locationId: string
-  queryUrl: string
   paymentsUrl: string
+  queryUrl: string
   webhookUrl?: string
+  supportsSubscriptionSchedule: boolean
 }
 
-export interface GhlProviderConnectConfig {
+export interface GhlCreateProviderResponse {
+  _id: string
+  name: string
+  description: string
+  imageUrl: string
+  paymentsUrl: string
+  queryUrl: string
+  locationId: string
+  marketplaceAppId: string
+  supportsSubscriptionSchedule: boolean
+  deleted: boolean
+  createdAt: string
+  updatedAt: string
+  traceId: string
+}
+
+export interface GhlProviderModeConfig {
   apiKey: string
   publishableKey: string
 }
 
+export interface GhlConnectProviderRequest {
+  test: GhlProviderModeConfig | null
+  live: GhlProviderModeConfig | null
+}
+
 export interface GhlPaymentQueryRequest {
-  type: 'verify' | 'refund' | 'list_payment_methods' | 'charge_payment'
+  type: 'verify' | 'refund' | 'list_payment_methods' | 'charge_payment' | 'create_subscription'
   transactionId?: string
   apiKey?: string
   chargeId?: string
@@ -113,18 +134,45 @@ export interface GhlPaymentQueryRequest {
   chargeDescription?: string
 }
 
-export interface GhlPaymentQueryResponse {
+export interface GhlPaymentMethod {
+  id: string
+  type: string
+  title: string
+  subTitle: string
+  expiry: string
+  customerId: string
+  imageUrl: string
+}
+
+export interface GhlChargeSnapshot {
+  id: string
+  status: string
+  amount: number
+  chargeId: string
+  chargedAt: number
+}
+
+export interface GhlVerifyResponse {
   success?: boolean
   failed?: boolean
   chargeId?: string
   message?: string
-  chargeSnapshot?: {
-    id: string
-    status: string
-    amount: number
-    chargeId: string
-    chargedAt: number
-  }
+  chargeSnapshot?: GhlChargeSnapshot
+}
+
+export interface GhlRefundResponse {
+  success?: boolean
+  failed?: boolean
+  message?: string
+  refundId?: string
+}
+
+export interface GhlChargePaymentResponse {
+  success?: boolean
+  failed?: boolean
+  chargeId?: string
+  message?: string
+  chargeSnapshot?: GhlChargeSnapshot
 }
 
 export interface PaymentInitiateProps {
