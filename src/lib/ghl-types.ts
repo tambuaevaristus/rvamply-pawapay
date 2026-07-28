@@ -120,6 +120,28 @@ export interface GhlConnectProviderRequest {
   live: GhlProviderModeConfig | null
 }
 
+export interface GhlFetchProviderResponse {
+  _id?: string
+  id?: string
+  name?: string
+  description?: string
+  imageUrl?: string
+  paymentsUrl?: string
+  queryUrl?: string
+  webhookUrl?: string
+  locationId?: string
+  marketplaceAppId?: string
+  supportsSubscriptionSchedule?: boolean
+  deleted?: boolean
+  createdAt?: string
+  updatedAt?: string
+  traceId?: string
+  paymentProvider?: {
+    test?: { apiKey?: string; publishableKey?: string; liveMode?: boolean }
+    live?: { apiKey?: string; publishableKey?: string; liveMode?: boolean }
+  }
+}
+
 export interface GhlPaymentQueryRequest {
   type: 'verify' | 'refund' | 'list_payment_methods' | 'charge_payment' | 'create_subscription'
   transactionId?: string
