@@ -544,24 +544,14 @@ export async function registerPaymentProvider(
 
   log('register_payment_provider_start', { locationId, hasConnectionConfig: !!connectionConfig })
 
-  // Step 1: Check if provider already exists
-  const existing = await fetchProviderDefinition(locationId, accessToken)
-
-  let providerResult: GhlCreateProviderResponse | GhlFetchProviderResponse
-
-  if (existing && existing.deleted === false) {
-    providerResult = existing
-    log('register_provider_skipped_exists', {
-      locationId,
-      providerId: existing._id || existing.id,
-    })
-  } else {
-    providerResult = await createPaymentIntegration(locationId, providerConfig, accessToken)
-    log('register_provider_created', {
-      locationId,
-      providerId: (providerResult as GhlCreateProviderResponse)._id,
-    })
-  }
+  // Always attempt to create the provider via POST.
+  // If it already exists, the API returns 422/409 and createPaymentIntegration
+  // falls back to fetching the existing definition.
+  const providerResult = await createPaymentIntegration(locationId, providerConfig, accessToken)
+  log('register_provider_created', {
+    locationId,
+    providerId: (providerResult as GhlCreateProviderResponse)._id || (providerResult as GhlFetchProviderResponse).id,
+  })
 
   // Step 2: Connect config only if we have valid API credentials
   if (connectionConfig && (connectionConfig.test || connectionConfig.live)) {
