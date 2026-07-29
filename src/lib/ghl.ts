@@ -47,7 +47,7 @@ export function buildProviderConfig(): GhlCreateProviderRequest {
     name: PROVIDER_NAME,
     description: PROVIDER_DESCRIPTION,
     imageUrl: `${baseUrl}/globe.svg`,
-    paymentsUrl: `${baseUrl}/payment/ghl`,
+    paymentsUrl: `${baseUrl}/payment/checkout`,
     queryUrl: `${baseUrl}/api/pawa/payments/query`,
     webhookUrl: `${baseUrl}/api/pawa/webhook`,
     supportsSubscriptionSchedule: false,
@@ -527,11 +527,12 @@ export async function fetchProviderConfig(
 }
 
 /**
- * Registers (or updates) a payment provider for a location.
+ * Registers (or re-registers) a payment provider for a location.
  *
- * This is idempotent:
- * 1. Checks if a provider definition already exists — skips creation if so.
- * 2. Only calls connectProviderConfig when there are valid API keys to send.
+ * Always attempts to create the provider via POST every call.
+ * If GHL rejects because it already exists (422/409), falls back
+ * to fetching the existing definition.
+ * Only calls connectProviderConfig when valid API keys are provided.
  *
  * Returns an object describing what was done.
  */
