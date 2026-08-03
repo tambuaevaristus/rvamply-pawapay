@@ -32,21 +32,23 @@ function logError(step: string, data: Record<string, unknown>) {
 
 function buildConnectConfig(locationId: string): GhlConnectProviderRequest {
   const existingConfig = getConfig(locationId)
-  const envApiKey = process.env.PAWAPAY_API_KEY
+  const envTestApiKey = process.env.PAWAPAY_API_KEY
+  const envLiveApiKey = process.env.PAWAPAY_LIVE_API_KEY
 
+  // Priority: stored config > env var
   const testModeConfig: GhlProviderModeConfig | null =
-    existingConfig?.testModeApiKey || envApiKey
+    existingConfig?.testModeApiKey || envTestApiKey
       ? {
-          apiKey: existingConfig?.testModeApiKey || envApiKey || '',
-          publishableKey: existingConfig?.testModePublishableKey || envApiKey || '',
+          apiKey: existingConfig?.testModeApiKey || envTestApiKey || '',
+          publishableKey: existingConfig?.testModePublishableKey || envTestApiKey || '',
         }
       : null
 
   const liveModeConfig: GhlProviderModeConfig | null =
-    existingConfig?.liveModeApiKey
+    existingConfig?.liveModeApiKey || envLiveApiKey
       ? {
-          apiKey: existingConfig.liveModeApiKey,
-          publishableKey: existingConfig.liveModePublishableKey || existingConfig.liveModeApiKey,
+          apiKey: existingConfig?.liveModeApiKey || envLiveApiKey || '',
+          publishableKey: existingConfig?.liveModePublishableKey || envLiveApiKey || '',
         }
       : null
 
