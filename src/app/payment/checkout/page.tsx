@@ -16,11 +16,16 @@ interface GhlPaymentContext {
   orderId?: string
   transactionId?: string
   locationId: string
+  productDetails?: {
+    productId?: string
+    priceId?: string
+  }
 }
 
 export default function GhlPaymentPage() {
   const [context, setContext] = useState<GhlPaymentContext | null>(null)
   const [chargeId, setChargeId] = useState<string | null>(null)
+  const [summaryOpen, setSummaryOpen] = useState(true)
 
   useEffect(() => {
     window.parent.postMessage(
@@ -43,6 +48,7 @@ export default function GhlPaymentPage() {
           orderId: data.orderId,
           transactionId: data.transactionId,
           locationId: data.locationId || '',
+          productDetails: data.productDetails,
         })
       }
 
@@ -114,14 +120,77 @@ export default function GhlPaymentPage() {
         ) : (
           <>
             {context && (
-              <div className="mb-4 p-3 bg-purple-50 rounded-lg text-sm text-purple-700">
-                {context.amount > 0 && (
-                  <p className="font-semibold">
-                    Amount: {context.currency} {context.amount.toFixed(2)}
-                  </p>
+              <div className="mb-4 border border-purple-200 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setSummaryOpen(!summaryOpen)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-purple-50 hover:bg-purple-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {context.amount > 0 && (
+                      <span className="text-lg font-bold text-purple-900">
+                        {context.currency} {context.amount.toFixed(2)}
+                      </span>
+                    )}
+                    {context.contact?.name && (
+                      <span className="text-sm text-purple-600">
+                        {context.contact.name}
+                      </span>
+                    )}
+                  </div>
+                  <svg
+                    className={`w-5 h-5 text-purple-500 transition-transform ${summaryOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {summaryOpen && (
+                  <div className="px-4 py-3 bg-white border-t border-purple-100">
+                    <dl className="space-y-2 text-sm">
+                      {context.amount > 0 && (
+                        <div className="flex justify-between">
+                          <dt className="text-purple-500">Amount</dt>
+                          <dd className="font-semibold text-purple-900">
+                            {context.currency} {context.amount.toFixed(2)}
+                          </dd>
+                        </div>
+                      )}
+                      {context.contact?.name && (
+                        <div className="flex justify-between">
+                          <dt className="text-purple-500">Payer</dt>
+                          <dd className="text-purple-900">{context.contact.name}</dd>
+                        </div>
+                      )}
+                      {context.contact?.email && (
+                        <div className="flex justify-between">
+                          <dt className="text-purple-500">Email</dt>
+                          <dd className="text-purple-900">{context.contact.email}</dd>
+                        </div>
+                      )}
+                      {context.orderId && (
+                        <div className="flex justify-between">
+                          <dt className="text-purple-500">Order ID</dt>
+                          <dd className="font-mono text-xs text-purple-900">{context.orderId}</dd>
+                        </div>
+                      )}
+                      {context.productDetails?.productId && (
+                        <div className="flex justify-between">
+                          <dt className="text-purple-500">Product ID</dt>
+                          <dd className="font-mono text-xs text-purple-900">{context.productDetails.productId}</dd>
+                        </div>
+                      )}
+                      {context.productDetails?.priceId && (
+                        <div className="flex justify-between">
+                          <dt className="text-purple-500">Price ID</dt>
+                          <dd className="font-mono text-xs text-purple-900">{context.productDetails.priceId}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
                 )}
-                {context.contact?.name && <p>Payer: {context.contact.name}</p>}
-                {context.orderId && <p>Order: {context.orderId}</p>}
               </div>
             )}
             <PaymentForm
