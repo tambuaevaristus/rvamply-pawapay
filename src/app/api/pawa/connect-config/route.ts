@@ -18,14 +18,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null)
     const locationId = typeof body?.locationId === 'string' ? body.locationId.trim() : ''
 
-    log('connect_config_received', {
-      locationId,
-      hasBody: !!body,
-      bodyKeys: body ? Object.keys(body) : [],
-      testPresent: !!(body?.test || body?.testMode),
-      livePresent: !!(body?.live || body?.liveMode),
-    })
-
     if (!locationId) {
       return NextResponse.json({ error: 'locationId is required' }, { status: 400 })
     }
@@ -39,29 +31,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    log('installation_found', {
-      locationId,
-      hasAccessToken: !!installation.accessToken,
-      installedAt: installation.installedAt,
-    })
-
-    // Extract test config (supports both 'test' and 'testMode' field names)
     const testMode: GhlProviderModeConfig | null = extractModeConfig(body, 'test', 'testMode')
-
-    // Extract live config (supports both 'live' and 'liveMode' field names)
     const liveMode: GhlProviderModeConfig | null = extractModeConfig(body, 'live', 'liveMode')
 
-    log('config_extracted', {
-      locationId,
-      hasTest: !!testMode,
-      testApiKeyLength: testMode?.apiKey?.length || 0,
-      testPublishableKeyLength: testMode?.publishableKey?.length || 0,
-      hasLive: !!liveMode,
-      liveApiKeyLength: liveMode?.apiKey?.length || 0,
-      livePublishableKeyLength: liveMode?.publishableKey?.length || 0,
-    })
-
-    // Save to local store
     upsertConfig({
       locationId,
       testModeApiKey: testMode?.apiKey ?? null,
@@ -71,49 +43,33 @@ export async function POST(request: NextRequest) {
       isLive: 0,
     })
 
-    log('config_saved_locally', { locationId })
-
-    // Only connect if there are valid keys
     const hasValidKeys = (testMode?.apiKey || liveMode?.apiKey)
     if (!hasValidKeys) {
-      log('connect_skipped_no_keys', { locationId })
+      log('connect_saved_no_keys', { locationId })
       return NextResponse.json({ success: true, message: 'Configuration saved. No API keys to connect.' })
     }
 
-    // Register/connect the provider with GHL
     const connectRequest: GhlConnectProviderRequest = {
       test: testMode?.apiKey ? testMode : null,
       live: liveMode?.apiKey ? liveMode : null,
     }
 
-    log('registering_provider', {
-      locationId,
-      connectRequest: {
-        hasTest: !!connectRequest.test,
-        testApiKeyLength: connectRequest.test?.apiKey?.length || 0,
-        hasLive: !!connectRequest.live,
-        liveApiKeyLength: connectRequest.live?.apiKey?.length || 0,
-      },
-    })
+    log('connect_registering', { locationId, hasTest: !!connectRequest.test, hasLive: !!connectRequest.live })
 
-    const registerStart = Date.now()
     const result = await registerPaymentProvider(locationId, installation.accessToken, connectRequest)
-    const registerDuration = Date.now() - registerStart
 
-    log('connect_config_success', {
+    log('connect_done', {
       locationId,
       providerId: (result.provider as Record<string, unknown>)._id as string || (result.provider as Record<string, unknown>).id as string,
-      connectExecuted: !!result.connect,
+      connected: !!result.connect,
       duration_ms: Date.now() - start,
-      registerDuration_ms: registerDuration,
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Config failed'
-    logError('connect_config_error', {
+    logError('connect_error', {
       error: message,
-      stack: error instanceof Error ? error.stack : undefined,
       duration_ms: Date.now() - start,
     })
     return NextResponse.json({ error: message }, { status: 500 })

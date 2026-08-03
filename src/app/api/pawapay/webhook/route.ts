@@ -10,19 +10,15 @@ export async function POST(request: NextRequest) {
     const payload = await request.text()
     const callback = parseCallbackPayload(JSON.parse(payload))
 
-    console.log(
-      `[Pawapay] Deposit ${callback.depositId}: ${callback.status}`
-    )
+    console.log(`[pawapay] deposit ${callback.depositId} status=${callback.status}`)
 
     const existing = getTransaction(callback.depositId)
 
     if (existing) {
-      const now = new Date().toISOString()
-
       upsertTransaction({
         ...existing,
         status: callback.status,
-        updatedAt: now,
+        updatedAt: new Date().toISOString(),
       })
     }
 
@@ -53,15 +49,8 @@ export async function POST(request: NextRequest) {
               updatedAt: new Date().toISOString(),
             })
           }
-
-          console.log(
-            `[GHL] Created opportunity for deposit ${callback.depositId}`
-          )
-        } catch (e) {
-          console.error(
-            `[GHL] Failed to create opportunity for ${callback.depositId}:`,
-            e
-          )
+        } catch {
+          console.error(`[pawapay] opportunity creation failed for ${callback.depositId}`)
         }
       }
     }

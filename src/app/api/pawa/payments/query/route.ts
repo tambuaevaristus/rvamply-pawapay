@@ -6,9 +6,7 @@ import type { GhlPaymentQueryRequest } from '@/lib/ghl-types'
 export async function POST(request: NextRequest) {
   try {
     const body: GhlPaymentQueryRequest = await request.json()
-    const { type, transactionId, chargeId, locationId, contactId } = body
-
-    console.log(`[GHL Query] type=${type} transactionId=${transactionId} chargeId=${chargeId} locationId=${locationId} contactId=${contactId}`)
+    const { type, transactionId, chargeId } = body
 
     switch (type) {
       case 'verify':
@@ -30,12 +28,11 @@ export async function POST(request: NextRequest) {
         })
 
       default:
-        console.warn('[GHL Query] Unknown type:', type)
         return NextResponse.json({ failed: true, message: `Unknown query type: ${type}` })
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Query processing failed'
-    console.error('[GHL Query] Error:', message)
+    console.error(`[query] error: ${message}`)
     return NextResponse.json({ success: false, failed: true, message }, { status: 500 })
   }
 }
@@ -114,8 +111,8 @@ async function handleVerify(transactionId?: string, chargeId?: string) {
           message: `Payment status: ${s}`,
         })
       }
-    } catch (e) {
-      console.warn('[GHL Query] PawaPay API check failed:', e)
+    } catch {
+      console.warn(`[query] pawapay check failed for chargeId=${chargeId}`)
     }
   }
 

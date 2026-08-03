@@ -9,7 +9,7 @@ import {
 const GHL_API_BASE = 'https://services.leadconnectorhq.com'
 const GHL_OAUTH_TOKEN_URL = `${GHL_API_BASE}/oauth/token`
 
-const PROVIDER_NAME = 'mountainHub PawaPay'
+const PROVIDER_NAME = 'RvPay'
 const PROVIDER_DESCRIPTION = 'Mobile money payments across Africa via PawaPay'
 
 // ─── Logging ──────────────────────────────────────────────────────────────────
@@ -77,13 +77,6 @@ async function ghlFetch(
   options: RequestInit = {}
 ): Promise<Response> {
   const url = path.startsWith('http') ? path : `${GHL_API_BASE}${path}`
-  const start = Date.now()
-
-  log('ghl_fetch', {
-    method: options.method || 'GET',
-    url,
-    hasToken: !!accessToken,
-  })
 
   const response = await fetch(url, {
     ...options,
@@ -96,16 +89,7 @@ async function ghlFetch(
     },
   })
 
-  const duration = Date.now() - start
   const responseBody = await response.text().catch(() => '')
-
-  log('ghl_fetch_response', {
-    url,
-    status: response.status,
-    statusText: response.statusText,
-    duration_ms: duration,
-    responseBody: responseBody.length > 2000 ? responseBody.slice(0, 2000) + '...' : responseBody,
-  })
 
   // Reconstruct response since body was consumed
   return new Response(responseBody, {
@@ -127,12 +111,6 @@ export async function exchangeCodeForToken(code: string): Promise<GhlTokenRespon
     grant_type: 'authorization_code',
     code,
     redirect_uri: redirectUri,
-  })
-
-  log('oauth_exchange', {
-    redirectUri,
-    clientId: clientId.slice(0, 10) + '...',
-    codeLength: code.length,
   })
 
   const start = Date.now()
@@ -158,14 +136,10 @@ export async function exchangeCodeForToken(code: string): Promise<GhlTokenRespon
   }
 
   const tokenData: GhlTokenResponse = await response.json()
-  log('oauth_exchange_success', {
+  log('oauth_exchange_ok', {
     duration_ms: duration,
-    user_type: tokenData.user_type,
     locationId: tokenData.locationId || null,
     companyId: tokenData.companyId || null,
-    scope: tokenData.scope,
-    hasRefreshToken: !!tokenData.refresh_token,
-    expires_in: tokenData.expires_in,
   })
 
   return tokenData
@@ -203,11 +177,10 @@ export async function getLocation(
   locationId: string,
   accessToken: string
 ): Promise<Record<string, unknown>> {
-  log('get_location', { locationId })
   const response = await ghlFetch(`/v3/locations/${locationId}`, accessToken)
   if (!response.ok) {
     const text = await response.text()
-    logError('get_location_failed', { locationId, status: response.status, response: text })
+    logError('get_location_failed', { locationId, status: response.status })
     throw new Error(`Failed to fetch location: ${text}`)
   }
   return response.json()
@@ -238,20 +211,36 @@ export async function listCompanyLocations(
   companyId: string,
   accessToken: string
 ): Promise<{ locations: Array<{ id: string; name: string; [key: string]: unknown }> }> {
-  log('list_company_locations', { companyId })
-  const response = await ghlFetch(`/v3/locations/search?companyId=${companyId}`, accessToken)
-  if (!response.ok) {
-    const body = await response.text()
-    if (!body.trim()) return { locations: [] }
-    logError('list_company_locations_failed', { companyId, status: response.status, response: body })
-    throw new Error(`Failed to list locations: ${body}`)
-  }
+  // GHL locations endpoint does NOT use /v3/ prefix
+  const response = await ghlFetch(`/locations/search?companyId=${companyId}`, accessToken)
   const body = await response.text()
+
+  log('list_company_locations_response', {
+    companyId,
+    status: response.status,
+    bodyLength: body.length,
+    bodyPreview: body.slice(0, 500),
+  })
+
+  if (!response.ok) {
+    if (!body.trim()) return { locations: [] }
+    throw new Error(`Failed to list locations (HTTP ${response.status}): ${body}`)
+  }
+
   if (!body.trim()) return { locations: [] }
+
   try {
-    return { locations: normalizeLocationsPayload(JSON.parse(body)) }
+    const parsed = JSON.parse(body)
+    const locations = normalizeLocationsPayload(parsed)
+
+    log('list_company_locations_parsed', {
+      companyId,
+      count: locations.length,
+      locationIds: locations.map(l => l.id),
+    })
+
+    return { locations }
   } catch {
-    logError('list_company_locations_parse_error', { body })
     throw new Error(`Failed to parse locations response: ${body}`)
   }
 }
@@ -268,7 +257,7 @@ export async function createContact(
   })
   if (!response.ok) {
     const text = await response.text()
-    logError('create_contact_failed', { locationId: data.locationId, status: response.status, response: text })
+    logError('create_contact_failed', { locationId: data.locationId, status: response.status })
     throw new Error(`Failed to create contact: ${text}`)
   }
   return response.json()
@@ -281,7 +270,7 @@ export async function getContact(
   const response = await ghlFetch(`/v3/contacts/${contactId}`, accessToken)
   if (!response.ok) {
     const text = await response.text()
-    logError('get_contact_failed', { contactId, status: response.status, response: text })
+    logError('get_contact_failed', { contactId, status: response.status })
     throw new Error(`Failed to fetch contact: ${text}`)
   }
   return response.json()
@@ -307,7 +296,7 @@ export async function createOpportunity(
   })
   if (!response.ok) {
     const text = await response.text()
-    logError('create_opportunity_failed', { locationId: data.locationId, contactId: data.contactId, status: response.status, response: text })
+    logError('create_opportunity_failed', { locationId: data.locationId, contactId: data.contactId, status: response.status })
     throw new Error(`Failed to create opportunity: ${text}`)
   }
   return response.json()
@@ -324,8 +313,8 @@ export async function updateOpportunityStage(
   })
   if (!response.ok) {
     const text = await response.text()
-    logError('update_opportunity_stage_failed', { opportunityId, status: response.status, response: text })
-    throw new Error(`Failed to update opportunity: ${text}`)
+    logError('update_opportunity_stage_failed', { opportunityId, status: response.status })
+    throw new Error(`Failed to update opportunity stage: ${text}`)
   }
   return response.json()
 }
@@ -336,36 +325,24 @@ export async function fetchProviderDefinition(
   locationId: string,
   accessToken: string
 ): Promise<GhlFetchProviderResponse | null> {
-  log('fetch_provider_definition', { locationId })
-
   const response = await ghlFetch(
-    `/v3/payments/custom-provider/provider?locationId=${encodeURIComponent(locationId)}`,
+    `/payments/custom-provider/provider?locationId=${encodeURIComponent(locationId)}`,
     accessToken
   )
 
   if (response.status === 404) {
-    log('fetch_provider_definition_not_found', { locationId })
     return null
   }
 
   if (!response.ok) {
-    const text = await response.text()
-    logError('fetch_provider_definition_failed', {
-      locationId,
-      status: response.status,
-      statusText: response.statusText,
-      response: text,
-    })
-    // Don't throw — treat as not found for resilience
     return null
   }
 
   const data: GhlFetchProviderResponse = await response.json()
-  log('fetch_provider_definition_found', {
+  log('provider_found', {
     locationId,
     providerId: data._id || data.id,
     name: data.name,
-    deleted: data.deleted,
   })
 
   return data
@@ -376,16 +353,8 @@ export async function createPaymentIntegration(
   config: GhlCreateProviderRequest,
   accessToken: string
 ): Promise<GhlCreateProviderResponse> {
-  log('create_payment_integration', {
-    locationId,
-    name: config.name,
-    paymentsUrl: config.paymentsUrl,
-    queryUrl: config.queryUrl,
-    supportsSubscriptionSchedule: config.supportsSubscriptionSchedule,
-  })
-
   const response = await ghlFetch(
-    `/v3/payments/custom-provider/provider?locationId=${encodeURIComponent(locationId)}`,
+    `/payments/custom-provider/provider?locationId=${encodeURIComponent(locationId)}`,
     accessToken,
     {
       method: 'POST',
@@ -395,16 +364,10 @@ export async function createPaymentIntegration(
 
   if (!response.ok) {
     const text = await response.text()
-    logError('create_payment_integration_failed', {
-      locationId,
-      status: response.status,
-      statusText: response.statusText,
-      response: text,
-    })
 
     // If provider already exists (422/409), this is not fatal
     if (response.status === 422 || response.status === 409) {
-      log('create_payment_integration_already_exists', { locationId })
+      log('provider_already_exists', { locationId })
       const existing = await fetchProviderDefinition(locationId, accessToken)
       if (existing) {
         return {
@@ -425,14 +388,14 @@ export async function createPaymentIntegration(
       }
     }
 
+    logError('create_provider_failed', { locationId, status: response.status })
     throw new Error(`Failed to create payment provider (HTTP ${response.status}): ${text}`)
   }
 
   const result: GhlCreateProviderResponse = await response.json()
-  log('create_payment_integration_success', {
+  log('provider_created', {
     locationId,
     providerId: result._id,
-    traceId: result.traceId,
   })
 
   return result
@@ -443,14 +406,8 @@ export async function connectProviderConfig(
   config: GhlConnectProviderRequest,
   accessToken: string
 ): Promise<Record<string, unknown>> {
-  log('connect_provider_config', {
-    locationId,
-    hasTest: !!config.test,
-    hasLive: !!config.live,
-  })
-
   const response = await ghlFetch(
-    `/v3/payments/custom-provider/connect?locationId=${encodeURIComponent(locationId)}`,
+    `/payments/custom-provider/connect?locationId=${encodeURIComponent(locationId)}`,
     accessToken,
     {
       method: 'POST',
@@ -460,29 +417,19 @@ export async function connectProviderConfig(
 
   if (!response.ok) {
     const text = await response.text()
-    logError('connect_provider_config_failed', {
-      locationId,
-      status: response.status,
-      statusText: response.statusText,
-      response: text,
-    })
+    logError('connect_provider_failed', { locationId, status: response.status })
     throw new Error(`Failed to connect provider config (HTTP ${response.status}): ${text}`)
   }
 
-  const result = await response.json()
-  log('connect_provider_config_success', { locationId, result })
-
-  return result
+  return response.json()
 }
 
 export async function disconnectProviderConfig(
   locationId: string,
   accessToken: string
 ): Promise<Record<string, unknown>> {
-  log('disconnect_provider_config', { locationId })
-
   const response = await ghlFetch(
-    `/v3/payments/custom-provider/disconnect?locationId=${encodeURIComponent(locationId)}`,
+    `/payments/custom-provider/disconnect?locationId=${encodeURIComponent(locationId)}`,
     accessToken,
     {
       method: 'POST',
@@ -491,11 +438,7 @@ export async function disconnectProviderConfig(
 
   if (!response.ok) {
     const text = await response.text()
-    logError('disconnect_provider_config_failed', {
-      locationId,
-      status: response.status,
-      response: text,
-    })
+    logError('disconnect_provider_failed', { locationId, status: response.status })
     throw new Error(`Failed to disconnect provider config: ${text}`)
   }
 
@@ -506,20 +449,14 @@ export async function fetchProviderConfig(
   locationId: string,
   accessToken: string
 ): Promise<Record<string, unknown>> {
-  log('fetch_provider_config', { locationId })
-
   const response = await ghlFetch(
-    `/v3/payments/custom-provider/connect?locationId=${encodeURIComponent(locationId)}`,
+    `/payments/custom-provider/connect?locationId=${encodeURIComponent(locationId)}`,
     accessToken
   )
 
   if (!response.ok) {
     const text = await response.text()
-    logError('fetch_provider_config_failed', {
-      locationId,
-      status: response.status,
-      response: text,
-    })
+    logError('fetch_provider_config_failed', { locationId, status: response.status })
     throw new Error(`Failed to fetch provider config: ${text}`)
   }
 
@@ -543,40 +480,29 @@ export async function registerPaymentProvider(
 ): Promise<{ provider: GhlCreateProviderResponse | GhlFetchProviderResponse; connect?: Record<string, unknown> }> {
   const providerConfig = buildProviderConfig()
 
-  log('register_payment_provider_start', { locationId, hasConnectionConfig: !!connectionConfig })
+  log('register_step_1_create_provider', { locationId })
 
-  // Always attempt to create the provider via POST.
-  // If it already exists, the API returns 422/409 and createPaymentIntegration
-  // falls back to fetching the existing definition.
   const providerResult = await createPaymentIntegration(locationId, providerConfig, accessToken)
-  log('register_provider_created', {
+
+  log('register_step_2_provider_ready', {
     locationId,
     providerId: (providerResult as GhlCreateProviderResponse)._id || (providerResult as GhlFetchProviderResponse).id,
   })
 
-  // Step 2: Connect config only if we have valid API credentials
   if (connectionConfig && (connectionConfig.test || connectionConfig.live)) {
-    // Validate that we're not sending empty objects — GHL may reject them
     const cleanConfig: GhlConnectProviderRequest = {
       test: connectionConfig.test?.apiKey ? connectionConfig.test : null,
       live: connectionConfig.live?.apiKey ? connectionConfig.live : null,
     }
 
     if (cleanConfig.test || cleanConfig.live) {
+      log('register_step_3_connect_keys', { locationId, hasTest: !!cleanConfig.test, hasLive: !!cleanConfig.live })
       const connectResult = await connectProviderConfig(locationId, cleanConfig, accessToken)
-      log('register_provider_connected', { locationId })
-
-      return {
-        provider: providerResult,
-        connect: connectResult,
-      }
+      log('register_done', { locationId, connected: true })
+      return { provider: providerResult, connect: connectResult }
     }
   }
 
-  log('register_provider_no_connect', {
-    locationId,
-    reason: connectionConfig ? 'no valid API keys' : 'no config provided',
-  })
-
+  log('register_done', { locationId, connected: false, reason: connectionConfig ? 'no valid API keys' : 'no config' })
   return { provider: providerResult }
 }

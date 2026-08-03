@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
 import {
   exchangeCodeForToken,
-  getGhlRedirectUri,
   listCompanyLocations,
   registerPaymentProvider,
 } from '@/lib/ghl'
@@ -56,16 +55,6 @@ function buildConnectConfig(locationId: string): GhlConnectProviderRequest {
     live: liveModeConfig,
   }
 
-  log('build_connect_config', {
-    locationId,
-    hasTest: !!testModeConfig,
-    testApiKeyPresent: !!testModeConfig?.apiKey,
-    hasLive: !!liveModeConfig,
-    liveApiKeyPresent: !!liveModeConfig?.apiKey,
-    envApiKeyPresent: !!envApiKey,
-    existingConfigPresent: !!existingConfig,
-  })
-
   return config
 }
 
@@ -76,12 +65,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const allParams = Object.fromEntries(searchParams.entries())
 
     log('callback_received', {
-      params: allParams,
-      redirectUri: getGhlRedirectUri(),
-      appUrl: process.env.NEXT_PUBLIC_APP_URL || 'not set',
       hasClientId: !!process.env.GHL_CLIENT_ID,
       hasClientSecret: !!process.env.GHL_CLIENT_SECRET,
     })
@@ -92,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     // ── Step 1: Validate authorization code ────────────────────────────────
     if (!code) {
-      logError('missing_code', { params: allParams })
+      logError('missing_code', { url: request.url })
       return new Response(
         '<html><body><h2>OAuth Error</h2><p>Missing authorization code.</p></body></html>',
         { status: 400, headers: { 'Content-Type': 'text/html' } }
@@ -101,7 +86,6 @@ export async function GET(request: NextRequest) {
     log('step_1_code_present', { codeLength: code.length })
 
     // ── Step 2: Exchange code for access token ─────────────────────────────
-    log('step_2_exchanging_code', { redirectUri: getGhlRedirectUri() })
     const tokenData = await exchangeCodeForToken(code)
 
     const tokenAny = tokenData as unknown as Record<string, unknown>
@@ -121,16 +105,8 @@ export async function GET(request: NextRequest) {
     const resolvedCompanyId = companyId || tokenCompanyId || null
 
     log('step_2_token_received', {
-      userType: tokenData.user_type,
-      tokenLocationId,
-      tokenCompanyId,
-      urlLocationId: locationId,
-      urlCompanyId: companyId,
       resolvedLocationId,
       resolvedCompanyId,
-      scopes: tokenData.scope,
-      expiresIn: tokenData.expires_in,
-      hasRefreshToken: !!tokenData.refresh_token,
     })
 
     if (!resolvedLocationId && !resolvedCompanyId) {
@@ -145,15 +121,8 @@ export async function GET(request: NextRequest) {
 
     // ── Step 3: Install for direct location (sub-account level) ────────────
     if (resolvedLocationId) {
-      log('step_3_installing_location', { locationId: resolvedLocationId, companyId: resolvedCompanyId })
-      const installStart = Date.now()
-
+      log('step_3_installing_location', { locationId: resolvedLocationId })
       await installLocation(resolvedLocationId, resolvedCompanyId, access_token, refresh_token, expires_in)
-
-      log('step_3_install_complete', {
-        locationId: resolvedLocationId,
-        duration_ms: Date.now() - installStart,
-      })
     }
 
     // ── Step 4: Install for company-level (all sub-accounts) ───────────────
@@ -162,35 +131,46 @@ export async function GET(request: NextRequest) {
 
       try {
         const { locations } = await listCompanyLocations(resolvedCompanyId, access_token)
-        log('step_4_locations_fetched', {
-          companyId: resolvedCompanyId,
-          locationCount: locations.length,
-          locationIds: locations.map(l => l.id),
-        })
 
-        let successCount = 0
-        let failCount = 0
+        if (locations.length === 0) {
+          log('step_4_no_locations', {
+            companyId: resolvedCompanyId,
+            message: 'No sub-account locations found. Attempting fallback: treating companyId as locationId.',
+          })
 
-        for (const loc of locations) {
           try {
-            await installLocation(loc.id, resolvedCompanyId, access_token, refresh_token, expires_in)
-            successCount++
+            await installLocation(resolvedCompanyId, resolvedCompanyId, access_token, refresh_token, expires_in)
+            log('step_4_fallback_success', { companyId: resolvedCompanyId })
           } catch (e) {
-            failCount++
-            logError('step_4_location_install_failed', {
-              locationId: loc.id,
-              locationName: loc.name,
+            logError('step_4_fallback_failed', {
+              companyId: resolvedCompanyId,
               error: e instanceof Error ? e.message : 'Unknown error',
             })
           }
-        }
+        } else {
+          let successCount = 0
+          let failCount = 0
 
-        log('step_4_company_install_complete', {
-          companyId: resolvedCompanyId,
-          successCount,
-          failCount,
-          totalLocations: locations.length,
-        })
+          for (const loc of locations) {
+            try {
+              await installLocation(loc.id, resolvedCompanyId, access_token, refresh_token, expires_in)
+              successCount++
+            } catch (e) {
+              failCount++
+              logError('step_4_location_install_failed', {
+                locationId: loc.id,
+                error: e instanceof Error ? e.message : 'Unknown error',
+              })
+            }
+          }
+
+          log('step_4_done', {
+            companyId: resolvedCompanyId,
+            successCount,
+            failCount,
+            totalLocations: locations.length,
+          })
+        }
       } catch (e) {
         logError('step_4_company_locations_failed', {
           companyId: resolvedCompanyId,
@@ -202,7 +182,7 @@ export async function GET(request: NextRequest) {
     log('callback_complete', {
       resolvedLocationId,
       resolvedCompanyId,
-      totalDuration_ms: Date.now() - requestStart,
+      duration_ms: Date.now() - requestStart,
     })
 
     // ── Step 5: Return page that closes tab and notifies GHL ───────────────
@@ -234,7 +214,6 @@ async function installLocation(
   refreshToken: string | null,
   expiresIn: number | undefined
 ) {
-  // Save the OAuth tokens
   upsertInstallation({
     id: `${locationId}-${Date.now()}`,
     locationId,
@@ -245,19 +224,16 @@ async function installLocation(
     installedAt: new Date().toISOString(),
   })
 
-  log('install_location_tokens_saved', { locationId, companyId })
-
-  // Register the payment provider (idempotent — skips if already exists)
   const connectConfig = buildConnectConfig(locationId)
 
   const registerStart = Date.now()
   const result = await registerPaymentProvider(locationId, accessToken, connectConfig)
   const registerDuration = Date.now() - registerStart
 
-  log('install_location_provider_registered', {
+  log('install_location_done', {
     locationId,
     providerId: (result.provider as Record<string, unknown>)._id as string || (result.provider as Record<string, unknown>).id as string,
-    connectExecuted: !!result.connect,
+    connected: !!result.connect,
     duration_ms: registerDuration,
   })
 }
