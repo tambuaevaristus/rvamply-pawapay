@@ -46,7 +46,7 @@ export function buildProviderConfig(): GhlCreateProviderRequest {
   return {
     name: PROVIDER_NAME,
     description: PROVIDER_DESCRIPTION,
-    imageUrl: `${baseUrl}/globe.svg`,
+    imageUrl: `${baseUrl}/logo.jpg`,
     paymentsUrl: `${baseUrl}/payment/checkout`,
     queryUrl: `${baseUrl}/api/pawa/payments/query`,
     webhookUrl: `${baseUrl}/api/pawa/webhook`,
