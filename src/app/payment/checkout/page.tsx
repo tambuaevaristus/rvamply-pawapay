@@ -193,13 +193,12 @@ export default function GhlPaymentPage() {
                 )}
               </div>
             )}
-            {context && (
-              <PaymentForm
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-                ghlContext={context}
-              />
-            )}
+            <PaymentForm
+              key={context?.amount || 'initial'}
+              onSuccess={handlePaymentSuccess}
+              onError={handlePaymentError}
+              ghlContext={context || undefined}
+            />
             <button
               onClick={handleClose}
               className="w-full mt-3 py-2 text-sm text-purple-500 hover:text-purple-700 transition-colors"
