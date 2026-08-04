@@ -197,26 +197,59 @@ export interface GhlChargePaymentResponse {
   chargeSnapshot?: GhlChargeSnapshot
 }
 
+// ─── GHL PostMessage Types ─────────────────────────────────────────────────────
+
+export interface GhlProductDetail {
+  _id?: string
+  name: string
+  qty: number
+  productId: string
+  priceId: string
+  isTaxesEnabled?: boolean
+  taxes?: Array<{
+    rate: number
+    name: string
+  }>
+  prices?: Array<{
+    _id?: string
+    name?: string
+    type?: string
+    currency?: string
+    amount: number
+    compareAtPrice?: number
+  }>
+}
+
+export interface GhlShippingAddress {
+  city?: string
+  country?: string
+  line1?: string
+  zipCode?: string
+  state?: string
+}
+
+export interface GhlPaymentContact {
+  id: string
+  name?: string
+  email?: string
+  contact?: string
+  shippingAddress?: GhlShippingAddress
+}
+
 export interface PaymentInitiateProps {
   type: 'payment_initiate_props'
   publishableKey: string
   amount: number
   currency: string
-  mode: 'payment' | 'setup'
-  productDetails?: {
-    productId?: string
-    priceId?: string
-  }
-  contact?: {
-    id: string
-    name?: string
-    email?: string
-    contact?: string
-  }
+  mode: 'payment' | 'setup' | 'subscription'
+  productDetails?: GhlProductDetail[]
+  contact?: GhlPaymentContact
   orderId?: string
   transactionId?: string
   subscriptionId?: string
   locationId: string
+  invoiceId?: string
+  language?: string
 }
 
 export interface SetupInitiateProps {
@@ -228,4 +261,61 @@ export interface SetupInitiateProps {
     id: string
   }
   locationId: string
+}
+
+// ─── GHL Order Types ──────────────────────────────────────────────────────────
+
+export interface GhlOrderTax {
+  name: string
+  amount: number
+}
+
+export interface GhlOrderItem {
+  name: string
+  quantity: number
+  price: number
+  discount: number
+  subtotal: number
+  productId: string
+  priceId: string
+  taxes?: GhlOrderTax[]
+}
+
+export interface GhlOrderProcessingCharge {
+  name: string
+  amount: number
+}
+
+export interface GhlOrder {
+  id: string
+  altId?: string
+  altType?: string
+  contactId?: string
+  contactName?: string
+  contactEmail?: string
+  currency: string
+  amount: number
+  subtotal: number
+  discount: number
+  status: string
+  liveMode?: boolean
+  totalProducts?: number
+  sourceType?: string
+  sourceName?: string
+  sourceId?: string
+  couponCode?: string
+  fulfillmentStatus?: string
+  onetimeProducts?: number
+  recurringProducts?: number
+  createdBy?: string
+  createdAt: string
+  updatedAt: string
+  automaticTaxesCalculated?: boolean
+  taxCalculationProvider?: string
+  items?: GhlOrderItem[]
+  processingCharges?: GhlOrderProcessingCharge[]
+}
+
+export interface GhlOrderResponse {
+  order: GhlOrder
 }
