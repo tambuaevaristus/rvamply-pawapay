@@ -49,12 +49,13 @@ export function normalizePhoneNumber(value: unknown): string {
     throw new PaymentValidationError('Phone number is required')
   }
 
-  const cleaned = value.trim().replace(/[^+\d]/g, '')
+  // Remove all non-digit characters (no +, spaces, dashes, etc.)
+  const cleaned = value.replace(/\D/g, '')
   if (!cleaned || cleaned.length < 8) {
     throw new PaymentValidationError('Phone number must contain at least 8 digits')
   }
 
-  return cleaned.startsWith('+') ? cleaned : `+${cleaned}`
+  return cleaned
 }
 
 export function validateCreatePaymentBody(body: Record<string, unknown>): {
