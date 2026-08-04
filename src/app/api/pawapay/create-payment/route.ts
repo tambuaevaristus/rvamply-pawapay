@@ -4,6 +4,25 @@ import { PawapayProvider } from '@/lib/types'
 import { upsertTransaction } from '@/lib/db'
 import { PaymentValidationError, validateCreatePaymentBody } from '@/lib/validation'
 
+function log(step: string, data: Record<string, unknown>) {
+  console.log(JSON.stringify({
+    ts: new Date().toISOString(),
+    source: 'create_payment',
+    step,
+    ...data,
+  }))
+}
+
+function logError(step: string, data: Record<string, unknown>) {
+  console.error(JSON.stringify({
+    ts: new Date().toISOString(),
+    source: 'create_payment',
+    level: 'error',
+    step,
+    ...data,
+  }))
+}
+
 function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0
@@ -13,6 +32,8 @@ function generateUUID(): string {
 }
 
 export async function POST(request: NextRequest) {
+  const start = Date.now()
+
   try {
     const body = await request.json().catch(() => null)
 
@@ -28,6 +49,15 @@ export async function POST(request: NextRequest) {
 
     const depositId = generateUUID()
 
+    log('deposit_initiate', {
+      depositId,
+      amount,
+      currency,
+      provider,
+      phoneNumber: phoneNumber.slice(0, -4) + '****', // Mask phone
+      clientReferenceId,
+    })
+
     const result = await initiateDeposit({
       depositId,
       amount: String(amount),
@@ -42,6 +72,13 @@ export async function POST(request: NextRequest) {
       clientReferenceId,
       customerMessage: 'Payment via rvamply',
       metadata: metadata ? Object.fromEntries(Object.entries(metadata).filter(([, value]) => typeof value === 'string')) as Record<string, string> : undefined,
+    })
+
+    log('deposit_result', {
+      depositId,
+      status: result.status,
+      failureReason: result.failureReason,
+      duration_ms: Date.now() - start,
     })
 
     const now = new Date().toISOString()
@@ -67,11 +104,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: result.status === 'ACCEPTED' ? 201 : 200 })
   } catch (error) {
     if (error instanceof PaymentValidationError) {
+      logError('validation_error', { error: error.message, duration_ms: Date.now() - start })
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
     const message =
       error instanceof Error ? error.message : 'Deposit initiation failed'
+    logError('deposit_error', { error: message, duration_ms: Date.now() - start })
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

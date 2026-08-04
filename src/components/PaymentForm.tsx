@@ -186,7 +186,7 @@ interface GhlContext {
 }
 
 interface PaymentFormProps {
-  onSuccess?: (result: { depositId: string; status: string }) => void
+  onSuccess?: (result: { depositId: string; status: string; failureReason?: string }) => void
   onError?: (error: string) => void
   ghlContext?: GhlContext
 }
@@ -248,7 +248,11 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
       }
 
       if (onSuccess) {
-        onSuccess({ depositId: data.depositId, status: data.status })
+        onSuccess({
+          depositId: data.depositId,
+          status: data.status,
+          failureReason: data.failureReason?.failureMessage,
+        })
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Payment failed'

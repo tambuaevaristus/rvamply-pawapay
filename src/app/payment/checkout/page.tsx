@@ -218,7 +218,7 @@ export default function GhlPaymentPage() {
     }
   }, [handleMessage])
 
-  const handlePaymentSuccess = async (result: { depositId: string; status: string }) => {
+  const handlePaymentSuccess = async (result: { depositId: string; status: string; failureReason?: string }) => {
     setChargeId(result.depositId)
 
     if (result.status === 'ACCEPTED' || result.status === 'COMPLETED') {
@@ -230,10 +230,12 @@ export default function GhlPaymentPage() {
         '*'
       )
     } else {
+      const errorMsg = result.failureReason || `Payment status: ${result.status}`
+      setError(errorMsg)
       window.parent.postMessage(
         JSON.stringify({
           type: 'custom_element_error_response',
-          error: { description: 'Payment was not accepted by the provider.' },
+          error: { description: errorMsg },
         }),
         '*'
       )
