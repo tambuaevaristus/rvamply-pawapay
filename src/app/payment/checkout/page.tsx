@@ -117,8 +117,22 @@ export default function GhlPaymentPage() {
   const [error, setError] = useState<string | null>(null)
 
   const handleMessage = useCallback((event: MessageEvent) => {
-    const data = event.data
-    if (!data || !data.type) return
+    let data = event.data
+
+    // Handle JSON string messages (GHL sometimes sends stringified JSON)
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data)
+      } catch {
+        // Not JSON, ignore
+        return
+      }
+    }
+
+    if (!data || !data.type) {
+      console.log('[GHL Payment] Ignoring message without type:', event.data)
+      return
+    }
 
     console.log('[GHL Payment] Received message:', data.type, data)
 
@@ -158,8 +172,10 @@ export default function GhlPaymentPage() {
     let retryCount = 0
     const maxRetries = 30
     const retryInterval = 500
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
 
     const sendReady = () => {
+      console.log('[GHL Payment] Sending custom_provider_ready')
       window.parent.postMessage(
         JSON.stringify({
           type: 'custom_provider_ready',
@@ -183,10 +199,21 @@ export default function GhlPaymentPage() {
       }
     }, retryInterval)
 
+    // Timeout: show error if no context received after 10 seconds
+    timeoutId = setTimeout(() => {
+      setContext(prev => {
+        if (!prev) {
+          setError('Timeout waiting for payment details from GoHighLevel. Please try again.')
+        }
+        return prev
+      })
+    }, 10000)
+
     window.addEventListener('message', handleMessage)
 
     return () => {
       clearInterval(interval)
+      if (timeoutId) clearTimeout(timeoutId)
       window.removeEventListener('message', handleMessage)
     }
   }, [handleMessage])
