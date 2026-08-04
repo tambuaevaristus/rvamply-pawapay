@@ -314,51 +314,49 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
           />
         </div>
 
-        {!ghlContext && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-purple-700 mb-1">
-                Country
-              </label>
-              <select
-                value={countryCode}
-                onChange={(e) => {
-                  setCountryCode(e.target.value)
-                  setProvider('')
-                }}
-                required
-                className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="">Select country</option>
-                {Object.entries(COUNTRIES).map(([code, info]) => (
-                  <option key={code} value={code}>
-                    {info.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-purple-700 mb-1">
-                Mobile Money Provider
-              </label>
-              <select
-                value={provider}
-                onChange={(e) => setProvider(e.target.value as PawapayProvider)}
-                required
-                disabled={!country}
-                className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
-              >
-                <option value="">Select provider</option>
-                {country?.providers.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-purple-700 mb-1">
+              Country
+            </label>
+            <select
+              value={countryCode}
+              onChange={(e) => {
+                setCountryCode(e.target.value)
+                setProvider('')
+              }}
+              required
+              className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="">Select country</option>
+              {Object.entries(COUNTRIES).map(([code, info]) => (
+                <option key={code} value={code}>
+                  {info.label}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+
+          <div>
+            <label className="block text-sm font-medium text-purple-700 mb-1">
+              Mobile Money Provider
+            </label>
+            <select
+              value={provider}
+              onChange={(e) => setProvider(e.target.value as PawapayProvider)}
+              required
+              disabled={!country}
+              className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
+            >
+              <option value="">Select provider</option>
+              {country?.providers.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-purple-700 mb-1">
