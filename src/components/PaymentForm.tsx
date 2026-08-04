@@ -7,6 +7,7 @@ interface CountryConfig {
   label: string
   alpha3: string
   currency: string
+  dialCode: string
   providers: { value: PawapayProvider; label: string }[]
 }
 
@@ -15,12 +16,14 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Kenya',
     alpha3: 'KEN',
     currency: 'KES',
+    dialCode: '254',
     providers: [{ value: 'MPESA_KEN', label: 'M-Pesa' }],
   },
   TZ: {
     label: 'Tanzania',
     alpha3: 'TZA',
     currency: 'TZS',
+    dialCode: '255',
     providers: [
       { value: 'AIRTEL_TZA', label: 'Airtel' },
       { value: 'VODACOM_TZA', label: 'Vodacom M-Pesa' },
@@ -32,6 +35,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Ghana',
     alpha3: 'GHA',
     currency: 'GHS',
+    dialCode: '233',
     providers: [
       { value: 'MTN_MOMO_GHA', label: 'MTN Mobile Money' },
       { value: 'AIRTELTIGO_GHA', label: 'AT Money' },
@@ -42,6 +46,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Senegal',
     alpha3: 'SEN',
     currency: 'XOF',
+    dialCode: '221',
     providers: [
       { value: 'ORANGE_SEN', label: 'Orange Money' },
       { value: 'FREE_SEN', label: 'Free Money' },
@@ -52,6 +57,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: "Côte d'Ivoire",
     alpha3: 'CIV',
     currency: 'XOF',
+    dialCode: '225',
     providers: [
       { value: 'MTN_MOMO_CIV', label: 'MTN Mobile Money' },
       { value: 'ORANGE_CIV', label: 'Orange Money' },
@@ -62,6 +68,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Uganda',
     alpha3: 'UGA',
     currency: 'UGX',
+    dialCode: '256',
     providers: [
       { value: 'MTN_MOMO_UGA', label: 'MTN Mobile Money' },
       { value: 'AIRTEL_OAPI_UGA', label: 'Airtel Money' },
@@ -71,6 +78,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Rwanda',
     alpha3: 'RWA',
     currency: 'RWF',
+    dialCode: '250',
     providers: [
       { value: 'MTN_MOMO_RWA', label: 'MTN Mobile Money' },
       { value: 'AIRTEL_RWA', label: 'Airtel Money' },
@@ -80,6 +88,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Zambia',
     alpha3: 'ZMB',
     currency: 'ZMW',
+    dialCode: '260',
     providers: [
       { value: 'MTN_MOMO_ZMB', label: 'MTN Mobile Money' },
       { value: 'AIRTEL_OAPI_ZMB', label: 'Airtel Money' },
@@ -90,6 +99,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Cameroon',
     alpha3: 'CMR',
     currency: 'XAF',
+    dialCode: '237',
     providers: [
       { value: 'MTN_MOMO_CMR', label: 'MTN Mobile Money' },
       { value: 'ORANGE_CMR', label: 'Orange Money' },
@@ -99,6 +109,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Mali',
     alpha3: 'MLI',
     currency: 'XOF',
+    dialCode: '223',
     providers: [
       { value: 'MTN_MOMO_CIV', label: 'MTN Mobile Money' },
       { value: 'ORANGE_CIV', label: 'Orange Money' },
@@ -108,6 +119,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Malawi',
     alpha3: 'MWI',
     currency: 'MWK',
+    dialCode: '265',
     providers: [
       { value: 'AIRTEL_MWI', label: 'Airtel Money' },
       { value: 'TNM_MWI', label: 'TNM Mpamba' },
@@ -117,6 +129,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Nigeria',
     alpha3: 'NGA',
     currency: 'NGN',
+    dialCode: '234',
     providers: [
       { value: 'MTN_MOMO_NGA', label: 'MTN Mobile Money' },
       { value: 'AIRTEL_NGA', label: 'Airtel Money' },
@@ -126,6 +139,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'DRC',
     alpha3: 'COD',
     currency: 'CDF',
+    dialCode: '243',
     providers: [
       { value: 'VODACOM_MPESA_COD', label: 'Vodacom M-Pesa' },
       { value: 'AIRTEL_COD', label: 'Airtel Money' },
@@ -136,6 +150,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Benin',
     alpha3: 'BEN',
     currency: 'XOF',
+    dialCode: '229',
     providers: [
       { value: 'MTN_MOMO_BEN', label: 'MTN Mobile Money' },
       { value: 'MOOV_BEN', label: 'Moov' },
@@ -145,18 +160,21 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Ethiopia',
     alpha3: 'ETH',
     currency: 'ETB',
+    dialCode: '251',
     providers: [{ value: 'MPESA_ETH', label: 'M-Pesa' }],
   },
   LS: {
     label: 'Lesotho',
     alpha3: 'LSO',
     currency: 'LSL',
+    dialCode: '266',
     providers: [{ value: 'MPESA_LSO', label: 'M-Pesa' }],
   },
   MZ: {
     label: 'Mozambique',
     alpha3: 'MOZ',
     currency: 'MZN',
+    dialCode: '258',
     providers: [
       { value: 'VODACOM_MOZ', label: 'Vodacom M-Pesa' },
       { value: 'MOVITEL_MOZ', label: 'Movitel' },
@@ -166,6 +184,7 @@ const COUNTRIES: Record<string, CountryConfig> = {
     label: 'Sierra Leone',
     alpha3: 'SLE',
     currency: 'SLE',
+    dialCode: '232',
     providers: [{ value: 'ORANGE_SLE', label: 'Orange Money' }],
   },
 }
@@ -326,8 +345,16 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
             <select
               value={countryCode}
               onChange={(e) => {
-                setCountryCode(e.target.value)
+                const newCode = e.target.value
+                setCountryCode(newCode)
                 setProvider('')
+                // Auto-prepend dial code to phone number
+                if (newCode && COUNTRIES[newCode]) {
+                  const dialCode = COUNTRIES[newCode].dialCode
+                  // Strip existing dial code if present
+                  const stripped = phoneNumber.replace(/^\d+/, '')
+                  setPhoneNumber(dialCode + stripped)
+                }
               }}
               required
               className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -364,16 +391,30 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
 
         <div>
           <label className="block text-sm font-medium text-purple-700 mb-1">
-            Mobile Number (with country code, e.g. 260763456789)
+            Mobile Number
           </label>
-          <input
-            type="tel"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            placeholder="260763456789"
-            required
-            className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          />
+          <div className="flex">
+            {country && (
+              <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-purple-200 bg-purple-50 text-purple-700 text-sm font-medium">
+                +{country.dialCode}
+              </span>
+            )}
+            <input
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => {
+                // Only allow digits
+                const digits = e.target.value.replace(/\D/g, '')
+                setPhoneNumber(digits)
+              }}
+              placeholder={country ? `e.g. ${country.dialCode}6XXXXXXXX` : 'Select country first'}
+              required
+              className={`flex-1 px-4 py-2.5 border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent ${country ? 'rounded-r-lg' : 'rounded-lg'}`}
+            />
+          </div>
+          <p className="text-xs text-purple-400 mt-1">
+            Enter the full number without + or spaces (e.g. 237653456789)
+          </p>
         </div>
 
         <div>
