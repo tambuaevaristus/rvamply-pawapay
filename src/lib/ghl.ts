@@ -9,7 +9,7 @@ import {
 const GHL_API_BASE = 'https://services.leadconnectorhq.com'
 const GHL_OAUTH_TOKEN_URL = `${GHL_API_BASE}/oauth/token`
 
-const PROVIDER_NAME = 'RvPay'
+const PROVIDER_NAME = 'RvPay-v1'
 const PROVIDER_DESCRIPTION = 'Mobile money payments across Africa via PawaPay'
 
 // ─── Logging ──────────────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ export function buildProviderConfig(): GhlCreateProviderRequest {
   return {
     name: PROVIDER_NAME,
     description: PROVIDER_DESCRIPTION,
-    imageUrl: `${baseUrl}/logo.jpg`,
+    imageUrl: `${baseUrl}/rvpay-logo.png`,
     paymentsUrl: `${baseUrl}/payment/checkout`,
     queryUrl: `${baseUrl}/api/pawa/payments/query`,
     webhookUrl: `${baseUrl}/api/pawa/webhook`,

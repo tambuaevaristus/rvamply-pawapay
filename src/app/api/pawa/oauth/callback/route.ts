@@ -234,10 +234,18 @@ async function installLocation(
 
   log('install_location_done', {
     locationId,
-    providerId: (result.provider as Record<string, unknown>)._id as string || (result.provider as Record<string, unknown>).id as string,
+    providerId: getProviderId(result.provider),
     connected: !!result.connect,
     duration_ms: registerDuration,
   })
+}
+
+function getProviderId(provider: unknown): string | null {
+  if (!provider || typeof provider !== 'object') return null
+
+  const record = provider as Record<string, unknown>
+  const id = record._id || record.id
+  return typeof id === 'string' ? id : null
 }
 
 // ─── HTML Templates ───────────────────────────────────────────────────────────
@@ -291,6 +299,8 @@ function renderCompletionPage(locationId: string): string {
 }
 
 function renderErrorPage(message: string): string {
+  const safeMessage = escapeHtml(message)
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -314,17 +324,30 @@ function renderErrorPage(message: string): string {
     </div>
     <h1>Installation Failed</h1>
     <p>There was an error connecting mountainHub.africa.</p>
-    <div class="details">${message}</div>
+    <div class="details">${safeMessage}</div>
     <p style="font-size:14px;color:#a78bfa;margin-top:16px;">You can close this tab and try again.</p>
   </div>
   <script>
     try {
       if (window.opener && !window.opener.closed) {
-        window.opener.postMessage({ type: 'app_install_failed', error: '${message.replace(/'/g, "\\'")}' }, '*');
+        window.opener.postMessage({ type: 'app_install_failed', error: '${safeMessage.replace(/'/g, "\\'")}' }, '*');
       }
     } catch(e) {}
     setTimeout(function() { window.close(); }, 5000);
   </script>
 </body>
 </html>`
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }
+    return entities[character]
+  })
 }

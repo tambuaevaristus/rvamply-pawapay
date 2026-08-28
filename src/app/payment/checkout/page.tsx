@@ -387,7 +387,6 @@ export default function GhlPaymentPage() {
             )}
           </div>
         )}
-
         {/* Products */}
         {products.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
