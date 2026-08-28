@@ -211,20 +211,17 @@ interface PaymentFormProps {
 }
 
 export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentFormProps) {
-  const initialName = ghlContext?.contact?.name?.split(' ') || []
-
   const [countryCode, setCountryCode] = useState('')
   const [provider, setProvider] = useState<PawapayProvider | ''>('')
   const [phoneNumber, setPhoneNumber] = useState(ghlContext?.contact?.contact || '')
   const [amount, setAmount] = useState(ghlContext?.amount ? String(ghlContext.amount) : '')
-  const [email, setEmail] = useState(ghlContext?.contact?.email || '')
-  const [firstName, setFirstName] = useState(initialName[0] || '')
-  const [lastName, setLastName] = useState(initialName.slice(1).join(' '))
+  const [agreed, setAgreed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const country = countryCode ? COUNTRIES[countryCode] : null
-  const currency = ghlContext?.currency || country?.currency || 'USD'
+  const currency = country?.currency || ghlContext?.currency || 'USD'
+  const amountIsAutomatic = Boolean(ghlContext?.amount)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -239,11 +236,8 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
         phoneNumber,
         clientReferenceId: ghlContext?.transactionId
           ? `ghl-${ghlContext.transactionId}`
-          : `${firstName}-${Date.now()}`,
+          : `rvpay-${Date.now()}`,
         metadata: {
-          firstName,
-          lastName,
-          email,
           phone: phoneNumber,
           ...(ghlContext?.locationId ? { ghlLocationId: ghlContext.locationId } : {}),
           ...(ghlContext?.contact?.id ? { ghlContactId: ghlContext.contact.id } : {}),
@@ -284,65 +278,31 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
 
   return (
     <div className="w-full max-w-lg mx-auto">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white shadow-lg rounded-xl p-8 space-y-6 border border-purple-100"
-      >
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-purple-900">
-            Mobile Money Payment
-          </h2>
-          <p className="text-sm text-purple-400 mt-1">
-            Pay via mobile money across Africa
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="payment-card">
+        <div className="payment-amount-row">
           <div>
-            <label className="block text-sm font-medium text-purple-700 mb-1">
-              First Name
-            </label>
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
+            <span className="payment-label">Payment amount</span>
+            <strong>{amount || '0'} {currency}</strong>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-purple-700 mb-1">
-              Last Name
-            </label>
-            <input
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
+          {!amountIsAutomatic && <span className="payment-edit">Edit</span>}
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-purple-700 mb-1">
-            Email
-          </label>
+        {!amountIsAutomatic && (
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            min="1"
+            step="1"
             required
-            className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            aria-label={`Payment amount in ${currency}`}
+            className="payment-input payment-amount-input"
           />
-        </div>
+        )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-purple-700 mb-1">
-              Country
-            </label>
+        <div className="payment-field">
+          <label className="payment-label" htmlFor="country">Country</label>
             <select
+              id="country"
               value={countryCode}
               onChange={(e) => {
                 const newCode = e.target.value
@@ -357,49 +317,45 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
                 }
               }}
               required
-              className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="payment-input payment-select"
             >
-              <option value="">Select country</option>
+              <option value="">Select your country</option>
               {Object.entries(COUNTRIES).map(([code, info]) => (
                 <option key={code} value={code}>
                   {info.label}
                 </option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-purple-700 mb-1">
-              Mobile Money Provider
-            </label>
-            <select
-              value={provider}
-              onChange={(e) => setProvider(e.target.value as PawapayProvider)}
-              required
-              disabled={!country}
-              className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
-            >
-              <option value="">Select provider</option>
-              {country?.providers.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-purple-700 mb-1">
-            Mobile Number
-          </label>
-          <div className="flex">
-            {country && (
-              <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-purple-200 bg-purple-50 text-purple-700 text-sm font-medium">
-                +{country.dialCode}
-              </span>
-            )}
+        {country && (
+          <div className="payment-field">
+            <span className="payment-label">Select payment method</span>
+            <div className="provider-grid">
+              {country.providers.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className={`provider-option ${provider === item.value ? 'provider-option-selected' : ''}`}
+                  onClick={() => setProvider(item.value)}
+                  aria-pressed={provider === item.value}
+                >
+                  <span className={`provider-logo provider-${item.value.split('_')[0].toLowerCase()}`}>
+                    {item.label.split(' ')[0]}
+                  </span>
+                  <span>{item.label.replace(' Mobile Money', '')}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="payment-field">
+          <label className="payment-label" htmlFor="phone">Mobile money number</label>
+          <div className="phone-input-wrap">
+            {country && <span className="dial-code">+{country.dialCode}</span>}
             <input
+              id="phone"
               type="tel"
               value={phoneNumber}
               onChange={(e) => {
@@ -407,47 +363,33 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
                 const digits = e.target.value.replace(/\D/g, '')
                 setPhoneNumber(digits)
               }}
-              placeholder={country ? `e.g. ${country.dialCode}6XXXXXXXX` : 'Select country first'}
+              placeholder={country ? `${country.dialCode} 6XX XXX XXX` : 'Select country first'}
               required
-              className={`flex-1 px-4 py-2.5 border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent ${country ? 'rounded-r-lg' : 'rounded-lg'}`}
+              className="payment-input phone-input"
             />
           </div>
-          <p className="text-xs text-purple-400 mt-1">
-            Enter the full number without + or spaces (e.g. 237653456789)
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-purple-700 mb-1">
-            Amount ({currency})
-          </label>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0"
-            min="1"
-            step="1"
-            required
-            className="w-full px-4 py-2.5 rounded-lg border border-purple-200 bg-white text-purple-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          />
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-600">{error}</p>
+          <div className="payment-error">
+            <p>{error}</p>
           </div>
         )}
 
+        <label className="terms-row">
+          <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} required />
+          <span>I agree to RvPay&apos;s <a href="#terms">Terms &amp; conditions</a></span>
+        </label>
+
         <button
           type="submit"
-          disabled={loading}
-          className="w-full py-3 px-6 bg-purple-700 hover:bg-purple-800 disabled:bg-purple-300 text-white font-semibold rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+          disabled={loading || !country || !provider || !agreed}
+          className="payment-submit"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
               <svg
-                className="animate-spin h-5 w-5"
+                  className="animate-spin h-5 w-5"
                 viewBox="0 0 24 24"
               >
                 <circle
@@ -468,14 +410,9 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
               Processing...
             </span>
           ) : (
-            'Pay Now'
+            `Pay ${amount || '0'}${currency}`
           )}
         </button>
-
-        <p className="text-xs text-center text-purple-400">
-          Secured by <span className="font-semibold text-red-500">PawaPay</span> &bull;
-          Mobile Money Powered
-        </p>
       </form>
     </div>
   )
