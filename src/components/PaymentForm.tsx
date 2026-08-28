@@ -211,9 +211,12 @@ interface PaymentFormProps {
 }
 
 export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentFormProps) {
-  const [countryCode, setCountryCode] = useState('')
+  const [countryCode, setCountryCode] = useState('CM')
   const [provider, setProvider] = useState<PawapayProvider | ''>('')
-  const [phoneNumber, setPhoneNumber] = useState(ghlContext?.contact?.contact || '')
+  const [phoneNumber, setPhoneNumber] = useState(() => {
+    const digits = ghlContext?.contact?.contact?.replace(/\D/g, '') || ''
+    return digits.startsWith(COUNTRIES.CM.dialCode) ? digits.slice(COUNTRIES.CM.dialCode.length) : digits
+  })
   const [amount, setAmount] = useState(ghlContext?.amount ? String(ghlContext.amount) : '')
   const [agreed, setAgreed] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -233,7 +236,7 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
         amount,
         currency,
         provider,
-        phoneNumber,
+        phoneNumber: country ? `${country.dialCode}${phoneNumber}` : phoneNumber,
         clientReferenceId: ghlContext?.transactionId
           ? `ghl-${ghlContext.transactionId}`
           : `rvpay-${Date.now()}`,
@@ -308,12 +311,16 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
                 const newCode = e.target.value
                 setCountryCode(newCode)
                 setProvider('')
-                // Auto-prepend dial code to phone number
                 if (newCode && COUNTRIES[newCode]) {
+                  const digits = phoneNumber.replace(/\D/g, '')
                   const dialCode = COUNTRIES[newCode].dialCode
-                  // Strip existing dial code if present
-                  const stripped = phoneNumber.replace(/^\d+/, '')
-                  setPhoneNumber(dialCode + stripped)
+                  const previousDialCode = country?.dialCode
+                  const stripped = previousDialCode && digits.startsWith(previousDialCode)
+                    ? digits.slice(previousDialCode.length)
+                    : digits.startsWith(dialCode)
+                      ? digits.slice(dialCode.length)
+                      : digits
+                  setPhoneNumber(stripped)
                 }
               }}
               required
@@ -359,9 +366,10 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
               type="tel"
               value={phoneNumber}
               onChange={(e) => {
-                // Only allow digits
                 const digits = e.target.value.replace(/\D/g, '')
-                setPhoneNumber(digits)
+                setPhoneNumber(country && digits.startsWith(country.dialCode)
+                  ? digits.slice(country.dialCode.length)
+                  : digits)
               }}
               placeholder={country ? `${country.dialCode} 6XX XXX XXX` : 'Select country first'}
               required
