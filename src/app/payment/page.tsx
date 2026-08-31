@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import PaymentForm from '@/components/PaymentForm'
 import PaymentStatus from '@/components/PaymentStatus'
+import { getPaymentLifecycleStatus } from '@/lib/payment-status'
 
 export default function PaymentPage() {
   const [paymentResult, setPaymentResult] = useState<{
@@ -13,17 +14,12 @@ export default function PaymentPage() {
   } | null>(null)
 
   const handleSuccess = (result: { depositId: string; status: string }) => {
-    if (result.status === 'ACCEPTED') {
-      setPaymentResult({
-        status: 'pending',
-        reference: result.depositId,
-      })
-    } else {
-      setPaymentResult({
-        status: 'failed',
-        reference: result.depositId,
-      })
-    }
+    const mappedStatus = getPaymentLifecycleStatus(result.status)
+
+    setPaymentResult({
+      status: mappedStatus,
+      reference: result.depositId,
+    })
   }
 
   const handleError = (error: string) => {

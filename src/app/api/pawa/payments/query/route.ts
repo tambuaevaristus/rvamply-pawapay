@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTransaction, getTransactionByGhlId } from '@/lib/db'
 import { checkDepositStatus } from '@/lib/pawapay'
+import { getPaymentLifecycleStatus } from '@/lib/payment-status'
 import type { GhlPaymentQueryRequest } from '@/lib/ghl-types'
 
 export async function POST(request: NextRequest) {
@@ -46,8 +47,9 @@ async function handleVerify(transactionId?: string, chargeId?: string) {
 
   if (tx) {
     const amount = parseFloat(tx.amount)
+    const lifecycleStatus = getPaymentLifecycleStatus(tx.status)
 
-    if (tx.status === 'COMPLETED') {
+    if (lifecycleStatus === 'success') {
       return NextResponse.json({
         success: true,
         chargeId: tx.depositId,
@@ -61,7 +63,7 @@ async function handleVerify(transactionId?: string, chargeId?: string) {
       })
     }
 
-    if (tx.status === 'FAILED') {
+    if (lifecycleStatus === 'failed') {
       return NextResponse.json({
         failed: true,
         chargeId: tx.depositId,
@@ -82,8 +84,9 @@ async function handleVerify(transactionId?: string, chargeId?: string) {
       if (depositResponse.status === 'FOUND' && depositResponse.data) {
         const s = depositResponse.data.status
         const amount = parseFloat(depositResponse.data.amount)
+        const lifecycleStatus = getPaymentLifecycleStatus(s)
 
-        if (s === 'COMPLETED') {
+        if (lifecycleStatus === 'success') {
           return NextResponse.json({
             success: true,
             chargeId: depositResponse.data.depositId,
@@ -97,7 +100,7 @@ async function handleVerify(transactionId?: string, chargeId?: string) {
           })
         }
 
-        if (s === 'FAILED') {
+        if (lifecycleStatus === 'failed') {
           return NextResponse.json({
             failed: true,
             chargeId: depositResponse.data.depositId,

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import PaymentForm from '@/components/PaymentForm'
+import { getPaymentLifecycleStatus } from '@/lib/payment-status'
 
 interface GhlPaymentContext {
   publishableKey: string
@@ -85,9 +86,11 @@ export default function GhlPaymentPage() {
 
   const handleSuccess = (result: { depositId: string; status: string; failureReason?: string }) => {
     setChargeId(result.depositId)
-    if (result.status === 'ACCEPTED' || result.status === 'COMPLETED') {
+    const mappedStatus = getPaymentLifecycleStatus(result.status)
+
+    if (mappedStatus === 'success') {
       notify({ type: 'custom_element_success_response', chargeId: result.depositId })
-    } else {
+    } else if (mappedStatus === 'failed') {
       const message = result.failureReason || `Payment status: ${result.status}`
       setError(message)
       notify({ type: 'custom_element_error_response', error: { description: message } })
