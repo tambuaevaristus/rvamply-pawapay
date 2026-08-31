@@ -59,9 +59,8 @@ export default function PaymentPage() {
           throw new Error(data?.error || 'Unable to check payment status')
         }
 
-        const lifecycleStatus = getPaymentLifecycleStatus(
-          data?.status || data?.data?.status || data?.data?.data?.status
-        )
+        const resolvedStatus = data?.data?.status ?? data?.status ?? data?.data?.data?.status
+        const lifecycleStatus = getPaymentLifecycleStatus(resolvedStatus)
 
         if (lifecycleStatus === 'success') {
           markFinalState('success')
@@ -94,10 +93,10 @@ export default function PaymentPage() {
   }, [paymentResult?.reference, paymentResult?.status])
 
   const handleSuccess = (result: { depositId: string; status: string; provider?: string; amount?: number; currency?: string }) => {
-    const mappedStatus = getPaymentLifecycleStatus(result.status)
+    const normalizedStatus = getPaymentLifecycleStatus(result.status)
 
     setPaymentResult({
-      status: mappedStatus,
+      status: normalizedStatus === 'success' ? 'success' : normalizedStatus === 'failed' ? 'failed' : 'pending',
       reference: result.depositId,
       amount: result.amount,
       currency: result.currency,

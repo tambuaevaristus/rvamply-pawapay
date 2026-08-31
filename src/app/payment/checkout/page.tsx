@@ -95,6 +95,7 @@ export default function GhlPaymentPage() {
       setError(message)
       notify({ type: 'custom_element_error_response', error: { description: message } })
     }
+    // Do not complete success or failure for non-final states such as ACCEPTED.
   }
 
   const handleError = (message: string) => {

@@ -1,7 +1,7 @@
 export function getPaymentLifecycleStatus(status: string | undefined): 'pending' | 'success' | 'failed' {
   const normalized = String(status || '').trim().toUpperCase()
 
-  if (['ACCEPTED', 'PROCESSING', 'IN_RECONCILIATION', 'PENDING'].includes(normalized)) {
+  if (['ACCEPTED', 'PROCESSING', 'IN_RECONCILIATION', 'PENDING', 'FOUND', 'INITIATED', 'QUEUED'].includes(normalized)) {
     return 'pending'
   }
 
@@ -9,7 +9,7 @@ export function getPaymentLifecycleStatus(status: string | undefined): 'pending'
     return 'success'
   }
 
-  if (['FAILED', 'REJECTED', 'CANCELLED', 'CANCELED', 'TIMEOUT', 'EXPIRED', 'DUPLICATE_IGNORED'].includes(normalized)) {
+  if (['FAILED', 'REJECTED', 'CANCELLED', 'CANCELED', 'TIMEOUT', 'EXPIRED', 'DUPLICATE_IGNORED', 'DECLINED'].includes(normalized)) {
     return 'failed'
   }
 

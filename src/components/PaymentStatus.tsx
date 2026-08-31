@@ -76,10 +76,6 @@ export default function PaymentStatus({ status, reference, amount, currency, ins
         </div>
       )}
 
-      <div className="bg-white rounded-xl p-3 border border-purple-100">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-purple-400">Reference</p>
-        <p className="mt-2 text-sm font-mono font-medium text-purple-900 break-all">{reference}</p>
-      </div>
     </div>
   )
 }
