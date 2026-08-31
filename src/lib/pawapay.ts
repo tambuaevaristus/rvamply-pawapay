@@ -11,12 +11,34 @@ const BASE_URLS: Record<PawapayEnvironment, string> = {
   production: 'https://api.pawapay.io',
 }
 
+function normalizeEnvironment(value: string | undefined): PawapayEnvironment {
+  const environment = value?.trim().toLowerCase()
+
+  if (!environment) {
+    return 'sandbox'
+  }
+
+  if (environment === 'sandbox' || environment === 'production') {
+    return environment
+  }
+
+  throw new Error(
+    `Invalid PAWAPAY_ENVIRONMENT value "${value}". Expected "sandbox" or "production".`
+  )
+}
+
 function getConfig() {
-  const environment = (process.env.PAWAPAY_ENVIRONMENT || 'sandbox') as PawapayEnvironment
-  const apiToken = process.env.PAWAPAY_API_KEY
+  const environment = normalizeEnvironment(process.env.PAWAPAY_ENVIRONMENT)
+  const sandboxApiToken = process.env.PAWAPAY_API_KEY?.trim()
+  const liveApiToken = process.env.PAWAPAY_LIVE_API_KEY?.trim()
+
+  const apiToken = environment === 'production'
+    ? (liveApiToken || sandboxApiToken || '')
+    : (sandboxApiToken || liveApiToken || '')
 
   if (!apiToken) {
-    throw new Error('Pawapay API token not configured (PAWAPAY_API_KEY)')
+    const keyName = environment === 'production' ? 'PAWAPAY_LIVE_API_KEY' : 'PAWAPAY_API_KEY'
+    throw new Error(`Pawapay API token not configured (${keyName})`)
   }
 
   return {
