@@ -1,24 +1,107 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import PaymentForm from '@/components/PaymentForm'
 import PaymentStatus from '@/components/PaymentStatus'
-import { getPaymentLifecycleStatus } from '@/lib/payment-status'
+import { getMomoInstruction, getPaymentLifecycleStatus } from '@/lib/payment-status'
+
+interface PaymentResult {
+  status: 'pending' | 'success' | 'failed'
+  reference: string
+  amount?: number
+  currency?: string
+  provider?: string
+}
+
+const PAYMENT_TIMEOUT_MS = 60_000
 
 export default function PaymentPage() {
-  const [paymentResult, setPaymentResult] = useState<{
-    status: 'pending' | 'success' | 'failed'
-    reference: string
-    amount?: number
-    currency?: string
-  } | null>(null)
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null)
 
-  const handleSuccess = (result: { depositId: string; status: string }) => {
+  useEffect(() => {
+    if (!paymentResult || paymentResult.status !== 'pending' || !paymentResult.reference) {
+      return
+    }
+
+    const startedAt = Date.now()
+    let cancelled = false
+    let pollTimer: number | undefined
+    let timeoutTimer: number | undefined
+
+    const markFinalState = (nextState: 'success' | 'failed') => {
+      if (!cancelled) {
+        setPaymentResult((current) => current ? { ...current, status: nextState } : current)
+      }
+    }
+
+    const poll = async () => {
+      if (cancelled) {
+        return
+      }
+
+      if (Date.now() - startedAt >= PAYMENT_TIMEOUT_MS) {
+        markFinalState('failed')
+        return
+      }
+
+      try {
+        const response = await fetch(
+          `/api/pawapay/verify-payment?depositId=${encodeURIComponent(paymentResult.reference)}`,
+          { cache: 'no-store' }
+        )
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data?.error || 'Unable to check payment status')
+        }
+
+        const lifecycleStatus = getPaymentLifecycleStatus(
+          data?.status || data?.data?.status || data?.data?.data?.status
+        )
+
+        if (lifecycleStatus === 'success') {
+          markFinalState('success')
+          return
+        }
+
+        if (lifecycleStatus === 'failed') {
+          markFinalState('failed')
+          return
+        }
+      } catch (error) {
+        console.warn('Payment poll failed:', error)
+      }
+
+      if (Date.now() - startedAt >= PAYMENT_TIMEOUT_MS) {
+        markFinalState('failed')
+        return
+      }
+
+      pollTimer = window.setTimeout(poll, 3000)
+    }
+
+    timeoutTimer = window.setTimeout(() => {
+      markFinalState('failed')
+    }, PAYMENT_TIMEOUT_MS)
+
+    pollTimer = window.setTimeout(poll, 2000)
+
+    return () => {
+      cancelled = true
+      if (pollTimer) window.clearTimeout(pollTimer)
+      if (timeoutTimer) window.clearTimeout(timeoutTimer)
+    }
+  }, [paymentResult?.reference, paymentResult?.status])
+
+  const handleSuccess = (result: { depositId: string; status: string; provider?: string; amount?: number; currency?: string }) => {
     const mappedStatus = getPaymentLifecycleStatus(result.status)
 
     setPaymentResult({
       status: mappedStatus,
       reference: result.depositId,
+      amount: result.amount,
+      currency: result.currency,
+      provider: result.provider,
     })
   }
 
@@ -35,7 +118,7 @@ export default function PaymentPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-50 to-white">
+    <main className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-50 via-white to-violet-50">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-purple-900">mountainHub.africa</h1>
@@ -51,6 +134,7 @@ export default function PaymentPage() {
               reference={paymentResult.reference}
               amount={paymentResult.amount}
               currency={paymentResult.currency}
+              instruction={paymentResult.status === 'pending' ? getMomoInstruction(paymentResult.provider) || 'Please complete the payment approval on your phone.' : undefined}
             />
             <button
               onClick={handleReset}

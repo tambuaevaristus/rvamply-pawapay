@@ -205,7 +205,14 @@ interface GhlContext {
 }
 
 interface PaymentFormProps {
-  onSuccess?: (result: { depositId: string; status: string; failureReason?: string }) => void
+  onSuccess?: (result: {
+    depositId: string
+    status: string
+    failureReason?: string
+    provider?: PawapayProvider
+    amount?: number
+    currency?: string
+  }) => void
   onError?: (error: string) => void
   ghlContext?: GhlContext
 }
@@ -268,6 +275,9 @@ export default function PaymentForm({ onSuccess, onError, ghlContext }: PaymentF
           depositId: data.depositId,
           status: data.status,
           failureReason: data.failureReason?.failureMessage,
+          provider: provider || undefined,
+          amount: Number(amount) || 0,
+          currency,
         })
       }
     } catch (err) {

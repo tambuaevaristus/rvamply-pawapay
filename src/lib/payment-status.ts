@@ -1,7 +1,7 @@
 export function getPaymentLifecycleStatus(status: string | undefined): 'pending' | 'success' | 'failed' {
-  const normalized = String(status || '').trim()
+  const normalized = String(status || '').trim().toUpperCase()
 
-  if (['ACCEPTED', 'PROCESSING', 'IN_RECONCILIATION'].includes(normalized)) {
+  if (['ACCEPTED', 'PROCESSING', 'IN_RECONCILIATION', 'PENDING'].includes(normalized)) {
     return 'pending'
   }
 
@@ -9,9 +9,22 @@ export function getPaymentLifecycleStatus(status: string | undefined): 'pending'
     return 'success'
   }
 
-  if (['FAILED', 'REJECTED', 'DUPLICATE_IGNORED'].includes(normalized)) {
+  if (['FAILED', 'REJECTED', 'CANCELLED', 'CANCELED', 'TIMEOUT', 'EXPIRED', 'DUPLICATE_IGNORED'].includes(normalized)) {
     return 'failed'
   }
 
   return 'pending'
+}
+
+export function getMomoInstruction(provider?: string): string | null {
+  if (!provider) {
+    return null
+  }
+
+  const normalized = provider.toUpperCase()
+  if (normalized.includes('MTN')) {
+    return 'Dial *126# on your phone to approve the MTN Mobile Money payment.'
+  }
+
+  return null
 }
