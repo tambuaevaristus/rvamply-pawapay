@@ -26,7 +26,11 @@ export default function PaymentPage() {
     const startedAt = Date.now()
     let cancelled = false
     let pollTimer: number | undefined
-    let timeoutTimer: number | undefined
+    const timeoutTimer = window.setTimeout(() => {
+      if (!cancelled) {
+        setPaymentResult((current) => current ? { ...current, status: 'failed' } : current)
+      }
+    }, PAYMENT_TIMEOUT_MS)
 
     const markFinalState = (nextState: 'success' | 'failed') => {
       if (!cancelled) {
@@ -79,10 +83,6 @@ export default function PaymentPage() {
 
       pollTimer = window.setTimeout(poll, 3000)
     }
-
-    timeoutTimer = window.setTimeout(() => {
-      markFinalState('failed')
-    }, PAYMENT_TIMEOUT_MS)
 
     pollTimer = window.setTimeout(poll, 2000)
 
