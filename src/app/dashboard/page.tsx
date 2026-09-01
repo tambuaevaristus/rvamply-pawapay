@@ -1,7 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { getAllInstallations, getAllTransactions } from '@/lib/db'
+import { useEffect, useMemo, useState } from 'react'
 
 interface LocationSummary {
   locationId: string
@@ -21,7 +20,12 @@ interface TransactionViewModel {
   phoneNumber: string
   createdAt: string
   clientReferenceId: string | null
-  metadata: Record<string, string>
+  metadata: Record<string, unknown>
+}
+
+interface DashboardResponse {
+  locations: LocationSummary[]
+  transactions: TransactionViewModel[]
 }
 
 function normalizeLocationLabel(locationId: string): string {
@@ -38,39 +42,46 @@ function formatMoney(amount: number, currency: string) {
 
 export default function DashboardPage() {
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
+  const [data, setData] = useState<DashboardResponse>({ locations: [], transactions: [] })
+  const [isLoading, setIsLoading] = useState(true)
 
-  const locations = useMemo(() => {
-    const installations = getAllInstallations()
-    const transactions = getAllTransactions()
+  useEffect(() => {
+    let active = true
 
-    const grouped = new Map<string, LocationSummary>()
+    async function loadDashboard() {
+      try {
+        const response = await fetch('/api/dashboard', { cache: 'no-store' })
+        if (!response.ok) {
+          throw new Error('Unable to load dashboard data')
+        }
 
-    for (const installation of installations) {
-      grouped.set(installation.locationId, {
-        locationId: installation.locationId,
-        totalTransactions: 0,
-        totalAmount: 0,
-        statusCounts: {},
-      })
-    }
+        const payload = (await response.json()) as DashboardResponse
+        if (!active) return
 
-    for (const tx of transactions) {
-      const locationId = tx.locationId || 'unknown'
-      const current = grouped.get(locationId) ?? {
-        locationId,
-        totalTransactions: 0,
-        totalAmount: 0,
-        statusCounts: {},
+        setData(payload)
+        if (payload.locations[0]) {
+          setSelectedLocationId(payload.locations[0].locationId)
+        }
+      } catch {
+        if (active) {
+          setData({ locations: [], transactions: [] })
+          setSelectedLocationId(null)
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false)
+        }
       }
-
-      current.totalTransactions += 1
-      current.totalAmount += Number(tx.amount || 0)
-      current.statusCounts[tx.status] = (current.statusCounts[tx.status] || 0) + 1
-      grouped.set(locationId, current)
     }
 
-    return Array.from(grouped.values()).sort((a, b) => b.totalAmount - a.totalAmount)
+    loadDashboard()
+
+    return () => {
+      active = false
+    }
   }, [])
+
+  const locations = data.locations
 
   const selectedLocation = selectedLocationId
     ? locations.find(location => location.locationId === selectedLocationId) || null
@@ -79,29 +90,10 @@ export default function DashboardPage() {
   const transactionsForLocation = useMemo(() => {
     if (!selectedLocationId) return []
 
-    return getAllTransactions()
+    return data.transactions
       .filter(tx => tx.locationId === selectedLocationId)
-      .map(tx => ({
-        id: tx.id,
-        depositId: tx.depositId,
-        locationId: tx.locationId,
-        amount: Number(tx.amount || 0),
-        currency: tx.currency,
-        status: tx.status,
-        provider: tx.provider,
-        phoneNumber: tx.phoneNumber,
-        createdAt: tx.createdAt,
-        clientReferenceId: tx.clientReferenceId,
-        metadata: (() => {
-          try {
-            return tx.metadata ? JSON.parse(tx.metadata) : {}
-          } catch {
-            return {}
-          }
-        })(),
-      }))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [selectedLocationId])
+  }, [data.transactions, selectedLocationId])
 
   const grandTotal = locations.reduce((sum, location) => sum + location.totalAmount, 0)
 
