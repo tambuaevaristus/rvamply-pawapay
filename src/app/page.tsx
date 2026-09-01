@@ -36,15 +36,24 @@ export default function Home() {
           </div>
         </div>
 
-        <Link
-          href="/payment"
-          className="inline-flex items-center justify-center px-8 py-3 bg-purple-700 hover:bg-purple-800 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-purple-200"
-        >
-          Make a Payment
-          <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
-        </Link>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+          <Link
+            href="/payment"
+            className="inline-flex items-center justify-center px-8 py-3 bg-purple-700 hover:bg-purple-800 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-purple-200"
+          >
+            Make a Payment
+            <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </Link>
+
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center justify-center px-8 py-3 bg-white hover:bg-purple-50 text-purple-700 font-semibold rounded-lg border border-purple-200 transition-colors"
+          >
+            View Dashboard
+          </Link>
+        </div>
 
         <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           <div className="text-sm text-purple-400">

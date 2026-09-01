@@ -114,6 +114,16 @@ export function getTransactionByGhlId(ghlTransactionId: string): Transaction | u
   return store.transactions.find(t => t.ghlTransactionId === ghlTransactionId)
 }
 
+export function getAllTransactions(): Transaction[] {
+  const store = loadStore()
+  return store.transactions
+}
+
+export function getTransactionsByLocation(locationId: string): Transaction[] {
+  const store = loadStore()
+  return store.transactions.filter(t => t.locationId === locationId)
+}
+
 export function upsertTransaction(tx: Transaction): void {
   const store = loadStore()
   const idx = store.transactions.findIndex(t => t.depositId === tx.depositId)
